@@ -1,0 +1,76 @@
+{
+  "name": "zfile",
+  "displayName": "zFile",
+  "description": "File reader/editor for mainframe",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "zfile.OpenFile",
+        "title": "zFile - Open File"
+      }
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "when": "view == zowe.ds.explorer && viewItem =~ /^(ds)/",
+          "command": "zfile.OpenFile",
+          "group": "910_zfile01"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "zFile",
+      "properties": {
+        "zFile.Copybooks.NumberOfPreviousCopybooks": {
+          "type": "integer",
+          "description": "Number of previous selected Copybooks to list on the quick pick",
+          "default": 5,
+          "order": 10,
+          "maximum": 20,
+          "minimum": 1
+        },
+        "zFile.Copybooks.ListOfPreviousCopybooks": {
+          "type": "array",
+          "description": "A list of previous selected Copybooks to list on the quick pick",
+          "order": 11,
+          "minItems": 0,
+          "maxItems": 20,
+          "items": {
+            "type": "string"
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.2",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.93.0",
+    "@vscode/test-electron": "^2.3.4",
+    "eslint": "^8.50.0",
+    "glob": "^10.3.3",
+    "mocha": "^10.2.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@zowe/imperative": "^5.27.1",
+    "@zowe/zos-files-for-zowe-sdk": "^7.29.2",
+    "@zowe/zowe-explorer-api": "^2.18.0",
+    "ebcdic-ascii": "^1.1.3"
+  }
+}
