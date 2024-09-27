@@ -69,9 +69,11 @@ class Linha {
 
             if (linhaSeparada[posTemDecimais] == "V9") {
                 this.tamanhoBruto += Number(linhaSeparada[posDecimais]);
+                this.decimais = Number(linhaSeparada[posDecimais]);
             } else {
                 if (linhaSeparada[posTemDecimais].startsWith("V9")) {
                     this.tamanhoBruto += linhaSeparada[posTemDecimais].length - 1;
+                    this.decimais = linhaSeparada[posTemDecimais].length - 1;
                 }
             }
         }

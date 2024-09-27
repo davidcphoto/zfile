@@ -8,6 +8,7 @@ const zos_files = require("@zowe/zos-files-for-zowe-sdk");
 const path = require('path');
 const EBCDIC = require("ebcdic-ascii").default;
 const zPic = require("./zPicClass.js");
+const { match } = require('assert');
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -219,6 +220,30 @@ class dadosEcran {
 							console.log('Texto        ' + Texto);
 							break;
 
+						case zPic.ValidaTipoCampo.Numerico:
+						case zPic.ValidaTipoCampo.NumericoSinal:
+
+							Alfa = Linha[j].substring(Inicio, Fim);
+							console.log('Alfa         ' + Alfa);
+							console.log('AlfatoEBCDIC ' + Conversor.toEBCDIC(Alfa));
+
+							const Numerico = Conversor.splitHex(Alfa);
+							console.log('Numerico ' + Numerico);
+							let NumericoTexto = '';
+							Numerico.forEach(CarHex => {
+								NumericoTexto += hextoEBCDIC(Conversor.toEBCDIC(CarHex));
+							})
+							let numericoTratado = Number(NumericoTexto);
+
+							if (element.decimais) {
+								numericoTratado = numericoTratado / (10 ** element.decimais);
+
+							}
+
+							Reg.push(numericoTratado);
+							console.log('numericoTratado ' + numericoTratado);
+							break;
+
 						case zPic.ValidaTipoCampo.Comp3:
 
 							if (element.Tamanho > 4) {
@@ -234,6 +259,10 @@ class dadosEcran {
 							let Numero = Number(Comp3.substring(0, Alfa.length - 1));
 							if (Comp3.slice(-1) == 'D') {
 								Numero = -Numero;
+							}
+							if (element.decimais) {
+								Numero = Numero / (10 ** element.decimais);
+
 							}
 							Reg.push(Numero);
 							console.log('Numero       ' + Numero);
@@ -311,8 +340,6 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 			quickPick.items = quickPick.items.concat(SeparadorPC);
 			quickPick.items = quickPick.items.concat(choicesPC.map(choice => ({ label: desktopIcon + ' ' + choice })));
 		}
-		quickPick.step = 1;
-		quickPick.totalSteps = 2;
 		quickPick.value = "";
 		quickPick.title = 'Select copybook';
 		quickPick.placeholder = 'Copybook path';
@@ -392,8 +419,8 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 					vscode.window.showInputBox({
 						placeHolder: "HLQ.LIB.COPY(COPYBOOK)",
 						value: "",
-						title: "Copybook to read file"
-					}).then((value) => {
+						title: "Copybook to read file",
+		           }).then((value) => {
 
 						if (!choices.includes(value)) {
 
