@@ -94,9 +94,13 @@ function lerFicheiroTxt(Ficheiro) {
 
 	console.log('lerFicheiroTxt');
 
-	return fs.readFileSync(path.resolve(Ficheiro), { encoding: 'utf8', flag: 'r' })
+	// const Resposta = fs.readFileSync(path.resolve(Ficheiro), { encoding: 'utf8', flag: 'r' })
+	const Resposta = fs.readFileSync(Ficheiro, { encoding: 'utf8', flag: 'r' })
 
-	// return CopyZPic;
+	if (!Resposta) {
+		vscode.window.showErrorMessage('File ' +  + ' fot found');
+	}
+	return Resposta;
 }
 
 
@@ -121,102 +125,143 @@ function abrirFicheiro(sessao, Ficheiro) {
 
 }
 
-function trataFicheiro(sessao, Ficheiro, Copybook) {
+function trataFicheiro(sessao, Ficheiro, Copybook, central=new Boolean) {
 
 	const ficheiro = abrirFicheiro(sessao, Ficheiro);
 
-	const copybook = abreCopybook(sessao, Copybook);
+	let copybook;
 
-	const dados = new dadosEcan(copybook, ficheiro);
+	if (central) {
+		copybook = abreCopybook(sessao, Copybook);
+	} else {
+		copybook = abreCopybook('', Copybook);
+	}
+
+
+
+	const dados = new dadosEcran(copybook, ficheiro);
+
+	const html = formataHTML(Ficheiro, Copybook, dados);
+
+	mostraFicheiro(html, Ficheiro);
 
 }
 
-class dadosEcan {
+class dadosEcran {
 	constructor(CopyBook, Ficheiro) {
+
+		const PageBreak = '0d0a';
 
 
 		const Conversor = new EBCDIC("0037");
 
-		// Conversor.setTable('0037');
-
-		// console.log('toASCII      - ' + Conversor.toASCII('F0F4F4C6'));
-		// console.log('toEBCDIC     - ' + Conversor.toEBCDIC('044F'));
-
+		this.Copybook = CopyBook;
+		this.Ficheiro = Ficheiro;
 		this.Cabecalho = [];
+		this.dados = [];
 		this.Linha = [];
 		this.lrec = CopyBook.Tamanho;
+		let Linha = [];
 
-		for (let i = 0; i < CopyBook.Copy.length; i++) {
+		Linha = Ficheiro.split(PageBreak);
+
+		let Inicio = 0;
+		let Fim = 0;
+
+
+		for (let i = 0; i < (CopyBook.Copy.length); i++) {
 			const element = CopyBook.Copy[i];
+
 			if (element.Tipo != zPic.ValidaTipoCampo.Grupo) {
 				this.Cabecalho.push(element.Variavel);
 			}
-
-		}
-		// const Linha = Ficheiro.split(0, CopyBook.lrec);
-		let Linha = [];
-		let f = 0;
-
-		while (f < Ficheiro.length) {
-			Linha.push(Ficheiro.substring(f, f + CopyBook.Tamanho * 2));
-			f += CopyBook.Tamanho * 2;
 		}
 
-		for (let i = 0; i < CopyBook.Copy.length; i++) {
-			const element = CopyBook.Copy[i];
-
-
-			console.log('----------------');
-			const Alfa = Linha[0].substring((element.Inicio * 2) - 2, (element.Fim * 2));
+		for (let j = 0; j < (Linha.length - 1); j++) {
 			let Reg = [];
-			console.log('Campo        ' + this.Cabecalho[i]);
-			console.log('Alfa         ' + Alfa);
-			console.log('AlfatoEBCDIC ' + Conversor.toEBCDIC(Alfa));
 
+			for (let i = 0; i < CopyBook.Copy.length; i++) {
+				const element = CopyBook.Copy[i];
 
-			switch (element.Tipo) {
-				case zPic.ValidaTipoCampo.Alfanumerico:
-				case zPic.ValidaTipoCampo.Display:
-				case zPic.ValidaTipoCampo.National:
-				case zPic.ValidaTipoCampo.Numerico:
-				case zPic.ValidaTipoCampo.NumericoFormatado:
-				case zPic.ValidaTipoCampo.NumericoSinal:
+				if (element.Tipo != zPic.ValidaTipoCampo.Grupo) {
 
-					const AlfaArray = Conversor.splitHex(Alfa);
-					console.log('AlfaArray ' + AlfaArray);
-					let Texto = '';
-					AlfaArray.forEach(CarHex => {
-						Texto += hextoEBCDIC(Conversor.toEBCDIC(CarHex));
-					})
-					Reg.push(Texto);
-					console.log('Texto        ' + Texto);
-					break;
-
-				case zPic.ValidaTipoCampo.Comp3:
-					// const Comp3Array =BigInt(Alfa);
-					const Comp3 = Conversor.toEBCDIC(Alfa);
-					console.log('Comp3        ' + Comp3);
-					let Numero = Number(Comp3.substring(0, Alfa.length - 1));
-					if (Comp3.slice(-1) == 'D') {
-						Numero = -Numero;
+					if (Fim == 0) {
+						Fim = element.Fim * 2;
+					} else {
+						Inicio = Fim;
+						Fim += element.Tamanho * 2;
 					}
-					Reg.push(Numero);
-					console.log('Numero       ' + Numero);
-					// const Comp3Array = Conversor.toASCII(Alfa);
-					// console.log('Comp3Array - ' + Comp3Array);
 
-					break;
-				default:
-					console.log(i + ' - ' + Alfa)
+					console.log('----------------');
+					console.log('Campo        ' + element.Variavel);
+					let Alfa = '';
+
+
+					switch (element.Tipo) {
+						case zPic.ValidaTipoCampo.Alfanumerico:
+						case zPic.ValidaTipoCampo.Display:
+						case zPic.ValidaTipoCampo.National:
+						case zPic.ValidaTipoCampo.Numerico:
+						case zPic.ValidaTipoCampo.NumericoFormatado:
+						case zPic.ValidaTipoCampo.NumericoSinal:
+
+							Alfa = Linha[j].substring(Inicio, Fim);
+							console.log('Alfa         ' + Alfa);
+							console.log('AlfatoEBCDIC ' + Conversor.toEBCDIC(Alfa));
+
+							const AlfaArray = Conversor.splitHex(Alfa);
+							console.log('AlfaArray ' + AlfaArray);
+							let Texto = '';
+							AlfaArray.forEach(CarHex => {
+								Texto += hextoEBCDIC(Conversor.toEBCDIC(CarHex));
+							})
+							Reg.push(Texto);
+							console.log('Texto        ' + Texto);
+							break;
+
+						case zPic.ValidaTipoCampo.Comp3:
+
+							if (element.Tamanho > 4) {
+								Fim = Inicio + 16;
+							}
+							Alfa = Linha[j].substring(Inicio, Fim);
+							console.log('Alfa         ' + Alfa);
+							console.log('AlfatoEBCDIC ' + Conversor.toEBCDIC(Alfa));
+
+
+							const Comp3 = Conversor.toEBCDIC(Alfa);
+							console.log('Comp3        ' + Comp3);
+							let Numero = Number(Comp3.substring(0, Alfa.length - 1));
+							if (Comp3.slice(-1) == 'D') {
+								Numero = -Numero;
+							}
+							Reg.push(Numero);
+							console.log('Numero       ' + Numero);
+
+							break;
+						default:
+							console.log(i + ' - ' + Alfa)
+					}
+				}
 			}
+			this.dados.push(Reg);
+			Inicio = 0;
+			Fim = 0;
 		}
 	}
 }
 
 function abreCopybook(sessao, ficheiro) {
 
+	let datasetPath;
 
-	const datasetPath = DownloadFicheiro(sessao, ficheiro)
+	if (sessao) {
+		const Path = DownloadFicheiro(sessao, ficheiro)
+		datasetPath = path.resolve(Path);
+	} else {
+		datasetPath = String(ficheiro);
+	}
+
 
 	const Copybook = lerFicheiroTxt(datasetPath)
 	console.log('Copybook ' + Copybook);
@@ -224,9 +269,8 @@ function abreCopybook(sessao, ficheiro) {
 	const CopyZPic = new zPic.Copybook(Copybook);
 	console.log(CopyZPic.Copy);
 	return CopyZPic;
-
-
 }
+
 async function SelecionarCopybook(sessao, Ficheiro) {
 
 
@@ -235,14 +279,21 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 	const zosmfProfAttrs = profInfo.getDefaultProfile("zosmf");
 
 	let choices = vscode.workspace.getConfiguration().get('zFile.Copybooks.ListOfPreviousCopybooks');
+	let choicesPC = vscode.workspace.getConfiguration().get('zFile.Copybooks.ListOfPreviousCopybooksPC');
 
 	const novos = [
 		{ label: 'Select copybook', kind: vscode.QuickPickItemKind.Separator },
-		{ label: '$(device-desktop) Select Copybook from my Computer', },
-		{ label: '$(remote) Select Copybook from ' + zosmfProfAttrs.profName }
+		{ label: 'Select Copybook from my Workstation $(device-desktop)'},
+		{ label: 'Select Copybook from ' + zosmfProfAttrs.profName + '$(remote)'}
 	]
 	const Separador = {
-		label: 'Previous Copybooks',
+		label: 'Previous Mainframe Copybooks',
+		kind: vscode.QuickPickItemKind.Separator
+	}
+
+
+	const SeparadorPC = {
+		label: 'Previous Workstation Copybooks',
 		kind: vscode.QuickPickItemKind.Separator
 	}
 
@@ -251,7 +302,11 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 		quickPick.items = novos;
 		if (choices) {
 			quickPick.items = quickPick.items.concat(Separador);
-			quickPick.items = quickPick.items.concat(choices.map(choice => ({ label: '$(file-code)' + choice })));
+			quickPick.items = quickPick.items.concat(choices.map(choice => ({ label: '$(remote)' + choice })));
+		}
+		if (choicesPC) {
+			quickPick.items = quickPick.items.concat(SeparadorPC);
+			quickPick.items = quickPick.items.concat(choicesPC.map(choice => ({ label: '$(device-desktop)' + choice })));
 		}
 		quickPick.step = 1;
 		quickPick.totalSteps = 2;
@@ -284,7 +339,7 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 				console.log('onDidAccept ' + quickPick.value);
 
 				resolve(quickPick.value)
-				trataFicheiro(sessao, Ficheiro, quickPick.value)
+				trataFicheiro(sessao, Ficheiro, quickPick.value, true)
 				quickPick.hide();
 
 			}
@@ -294,7 +349,49 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 		quickPick.onDidChangeSelection(() => {
 			console.log('onDidChangeSelection ' + quickPick.selectedItems[0].label);
 			resolve(quickPick.selectedItems[0].label)
-			trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12))
+			switch (true) {
+				case quickPick.selectedItems[0].label == 'Select Copybook from my Workstation $(device-desktop)':
+
+					const options = {
+						canSelectMany: false,
+						openLabel: 'Open',
+						filters: {
+							'Copybooks': ['cpy'],
+							'All files': ['*']
+						}
+					};
+
+					vscode.window.showOpenDialog(options).then(fileUri => {
+						if (fileUri && fileUri[0]) {
+							console.log('fileUri[0].fsPath: ' + fileUri[0].fsPath);
+							console.log('fileUri[0].path: ' + fileUri[0].path);
+
+							if (!choices.includes(fileUri[0].path)) {
+
+								choices.unshift(fileUri[0].path);
+								const NumeroHistorico = vscode.workspace.getConfiguration().get('zFile.Copybooks.NumberOfPreviousCopybooks');
+
+								while (NumeroHistorico < choices.length) {
+									choices.pop();
+								}
+								vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousCopybooks', choices);
+
+							}
+							trataFicheiro(sessao, Ficheiro, fileUri[0].fsPath, false)
+						}
+					});
+
+					break;
+				case quickPick.selectedItems[0].label == '$(remote) Select Copybook from ' + zosmfProfAttrs.profName:
+					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12),true)
+					break
+
+				case quickPick.selectedItems[0].label.startsWith('$(device-desktop)'):
+				case quickPick.selectedItems[0].label.startsWith('$(remote)'):
+
+			    default:
+				    trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12),true)
+			}
 			quickPick.hide();
 
 		})
@@ -330,7 +427,7 @@ function hextoEBCDIC(hex) {
 	let quadro1 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
 	let quadro2 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
 	let quadro3 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
-	let quadro4 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '¢', '.', '<', '(', '+', '|']
+	let quadro4 = [' ', '.', '.', '.', '.', '.', '.', '.', '.', '.', '¢', '.', '<', '(', '+', '|']
 	let quadro5 = ['&', '.', '.', '.', '.', '.', '.', '.', '.', '.', '!', '$', '*', ')', ';', '¬']
 	let quadro6 = ['-', '/', '.', '.', '.', '.', '.', '.', '.', '.', '¦', ',', '%', '_', '>', '?']
 	let quadro7 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '`', ':', '#', '@', "'", '=', '"']
@@ -350,4 +447,128 @@ function hextoEBCDIC(hex) {
 
 	return quadro[x][y];
 
+}
+
+function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
+
+	let Cabecalho='';
+
+	for (let i = 0; i < dados.Cabecalho.length; i++) {
+		const element = '<th>' + dados.Cabecalho[i] + '</th>';
+		Cabecalho += element;
+	}
+
+	let Corpo = '';
+
+	for (let i = 0; i < dados.dados.length; i++) {
+
+		let Linha = '';
+
+		for (let j = 0; j < dados.dados[i].length; j++) {
+			const element = '<td>' + dados.dados[i][j] + '</td>';
+			Linha += element;
+		}
+
+		const LinhaHTML = '<tr>' + Linha + '</tr>';
+		Corpo += LinhaHTML;
+
+
+	}
+
+	const HTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pic Calculator</title>
+
+        <style>
+
+            #cabecalho {
+                display: block;
+                position: relative;
+                z-index: 5;
+                padding: 8px;
+                top: 0;
+				left:0;
+                text-align: center;
+            }
+
+			h3 {
+                text-align: right;
+			}
+
+            #corpo {
+                text-align: center;
+                display: block;
+				overflow: auto;
+            }
+
+			#total {
+			    width:100%;
+			}
+
+            table {
+                display: block;
+                position: relative;
+                overflow-x: auto;
+                border-spacing: 5px;
+                width: max-content;
+            }
+
+            th {
+                padding: 8px;
+            }
+
+            tr {
+                background-color: var(--vscode-button-secondaryHoverBackground);
+            }
+
+            td {
+                background-color: var(--vscode-list-hoverBackground);
+                padding: 8px;
+            }
+
+        </style>
+</head>
+
+<body>
+    <div id="total">
+        <div id="cabecalho">
+            <div>
+                <h1>zFile</h1>
+                <h3>Copybook: ${Copybook}</h3>
+            </div>
+        </div>
+        <div id="corpo">
+            <table>
+                <tr>
+	    		    ${Cabecalho}
+                </tr>
+                ${Corpo}
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>
+`
+
+return HTML;
+
+}
+
+function mostraFicheiro(html, Ficheiro) {
+
+	let painel;
+	painel = vscode.window.createWebviewPanel('zFile', Ficheiro,1);
+	painel.webview.options = {
+		enableScripts: true,
+
+	};
+	painel.webview.html = html;
+	// painel.webview.onDidReceiveMessage(message => {
+	// 	abreElemento(message);
+	// })
 }
