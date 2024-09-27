@@ -48,6 +48,17 @@
             "type": "string"
           },
           "additionalProperties": false
+        },
+        "zFile.Copybooks.ListOfPreviousWorksationCopybooks": {
+          "type": "array",
+          "description": "A list of previous selected Worksation Copybooks to list on the quick pick",
+          "order": 11,
+          "minItems": 0,
+          "maxItems": 20,
+          "items": {
+            "type": "string"
+          },
+          "additionalProperties": false
         }
       }
     }

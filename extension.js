@@ -64,7 +64,7 @@ function DownloadFicheiro(session, dataset) {
 	let datasetPath = '';
 
 	// (async () => {
-	datasetPath = obtPastaTemporaria(session, dataset);
+	datasetPath = obtPastaTemporaria(dataset);
 	const options = {
 		"file": datasetPath
 	};
@@ -92,7 +92,7 @@ function lerFicheiroHex(Ficheiro) {
 
 function lerFicheiroTxt(Ficheiro) {
 
-	console.log('lerFicheiroTxt');
+	console.log('lerFicheiroTxt ' + Ficheiro);
 
 	// const Resposta = fs.readFileSync(path.resolve(Ficheiro), { encoding: 'utf8', flag: 'r' })
 	const Resposta = fs.readFileSync(Ficheiro, { encoding: 'utf8', flag: 'r' })
@@ -104,10 +104,10 @@ function lerFicheiroTxt(Ficheiro) {
 }
 
 
-function obtPastaTemporaria(sessão = '', ficheiro = '') {
+function obtPastaTemporaria(ficheiro = '') {
 
 	const pastaTemp = vscode.workspace.getConfiguration().get('zowe.files.temporaryDownloadsFolder.path');
-	const ficheiroTemp = pastaTemp + '/zSearch/' + sessão + '/' + ficheiro;
+	const ficheiroTemp = pastaTemp + '/ZfILE/'  + ficheiro;
 	console.log('ficheiro ' + ficheiroTemp);
 	return ficheiroTemp;
 
@@ -274,17 +274,19 @@ function abreCopybook(sessao, ficheiro) {
 async function SelecionarCopybook(sessao, Ficheiro) {
 
 
+	const remoteIcon = '$(remote)';
+	const desktopIcon = '$(device-desktop)';
 	const profInfo = new Imperative.ProfileInfo("zowe");
 	await profInfo.readProfilesFromDisk();
 	const zosmfProfAttrs = profInfo.getDefaultProfile("zosmf");
 
 	let choices = vscode.workspace.getConfiguration().get('zFile.Copybooks.ListOfPreviousCopybooks');
-	let choicesPC = vscode.workspace.getConfiguration().get('zFile.Copybooks.ListOfPreviousCopybooksPC');
+	let choicesPC = vscode.workspace.getConfiguration().get('zFile.Copybooks.ListOfPreviousWorksationCopybooks');
 
 	const novos = [
 		{ label: 'Select copybook', kind: vscode.QuickPickItemKind.Separator },
-		{ label: 'Select Copybook from my Workstation $(device-desktop)'},
-		{ label: 'Select Copybook from ' + zosmfProfAttrs.profName + '$(remote)'}
+		{ label: 'Select Copybook from my Workstation '+desktopIcon},
+		{ label: 'Select Copybook from ' + zosmfProfAttrs.profName + ' '+remoteIcon}
 	]
 	const Separador = {
 		label: 'Previous Mainframe Copybooks',
@@ -298,15 +300,16 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 	}
 
 	return new Promise((resolve) => {
+
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.items = novos;
 		if (choices) {
 			quickPick.items = quickPick.items.concat(Separador);
-			quickPick.items = quickPick.items.concat(choices.map(choice => ({ label: '$(remote)' + choice })));
+			quickPick.items = quickPick.items.concat(choices.map(choice => ({ label: remoteIcon + ' ' + choice })));
 		}
 		if (choicesPC) {
 			quickPick.items = quickPick.items.concat(SeparadorPC);
-			quickPick.items = quickPick.items.concat(choicesPC.map(choice => ({ label: '$(device-desktop)' + choice })));
+			quickPick.items = quickPick.items.concat(choicesPC.map(choice => ({ label: desktopIcon + ' ' + choice })));
 		}
 		quickPick.step = 1;
 		quickPick.totalSteps = 2;
@@ -349,14 +352,16 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 		quickPick.onDidChangeSelection(() => {
 			console.log('onDidChangeSelection ' + quickPick.selectedItems[0].label);
 			resolve(quickPick.selectedItems[0].label)
+			console.log('quickPick.selectedItems[0].label ' + quickPick.selectedItems[0].label)
 			switch (true) {
-				case quickPick.selectedItems[0].label == 'Select Copybook from my Workstation $(device-desktop)':
+				case quickPick.selectedItems[0].label.endsWith(desktopIcon):
 
 					const options = {
 						canSelectMany: false,
 						openLabel: 'Open',
 						filters: {
-							'Copybooks': ['cpy'],
+							'Copybooks': ['cpy', 'cp'],
+							'Text Files': ['txt'],
 							'All files': ['*']
 						}
 					};
@@ -366,15 +371,15 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 							console.log('fileUri[0].fsPath: ' + fileUri[0].fsPath);
 							console.log('fileUri[0].path: ' + fileUri[0].path);
 
-							if (!choices.includes(fileUri[0].path)) {
+							if (!choicesPC.includes(fileUri[0].path.substring(1).split('/').join('\\'))) {
 
-								choices.unshift(fileUri[0].path);
+								choicesPC.unshift(fileUri[0].path.substring(1).split('/').join('\\'));
 								const NumeroHistorico = vscode.workspace.getConfiguration().get('zFile.Copybooks.NumberOfPreviousCopybooks');
 
-								while (NumeroHistorico < choices.length) {
-									choices.pop();
+								while (NumeroHistorico < choicesPC.length) {
+									choicesPC.pop();
 								}
-								vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousCopybooks', choices);
+								vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousWorksationCopybooks', choicesPC);
 
 							}
 							trataFicheiro(sessao, Ficheiro, fileUri[0].fsPath, false)
@@ -382,15 +387,44 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 					});
 
 					break;
-				case quickPick.selectedItems[0].label == '$(remote) Select Copybook from ' + zosmfProfAttrs.profName:
-					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12),true)
-					break
+				case quickPick.selectedItems[0].label.endsWith(remoteIcon):
 
-				case quickPick.selectedItems[0].label.startsWith('$(device-desktop)'):
-				case quickPick.selectedItems[0].label.startsWith('$(remote)'):
+					vscode.window.showInputBox({
+						placeHolder: "HLQ.LIB.COPY(COPYBOOK)",
+						value: "",
+						title: "Copybook to read file"
+					}).then((value) => {
 
-			    default:
-				    trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12),true)
+						if (!choices.includes(value)) {
+
+							choices.unshift(value);
+							const NumeroHistorico = vscode.workspace.getConfiguration().get('zFile.Copybooks.NumberOfPreviousCopybooks');
+
+							while (NumeroHistorico < choices.length) {
+								choices.pop();
+							}
+							vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousWorksationCopybooks', choices);
+
+						}
+
+						trataFicheiro(sessao, Ficheiro, value, true)
+
+					});
+
+					break;
+
+				case quickPick.selectedItems[0].label.startsWith(desktopIcon):
+
+					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(desktopIcon.length).trim(), false)
+					break;
+
+				case quickPick.selectedItems[0].label.startsWith(remoteIcon):
+
+					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(remoteIcon.length+1), true)
+					break;
+
+			    // default:
+				//     trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12),true)
 			}
 			quickPick.hide();
 
@@ -538,7 +572,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
         <div id="cabecalho">
             <div>
                 <h1>zFile</h1>
-                <h3>Copybook: ${Copybook}</h3>
             </div>
         </div>
         <div id="corpo">
@@ -549,6 +582,9 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 ${Corpo}
             </table>
         </div>
+		<div>
+            <h3>Copybook: ${Copybook}</h3>
+		</div>
     </div>
 </body>
 

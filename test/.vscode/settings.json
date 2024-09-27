@@ -3,9 +3,13 @@
         "aaaasssss",
         "accdc"
     ],
+    "zFile.Copybooks.ListOfPreviousWorksationCopybooks": [
+        "C:\\Users\\d.fonseca.do.canto\\Documents\\VS-Code Workspace\\.c4z\\zSearch\\[object Object]\\DESV.LIB.COPY(AMCR0032)",
+        null,
+        "qual.lib.copy(amcr0032)"
+    ],
     "zFile.Copybooks.ListOfPreviousCopybooks": [
-        "DESV.LIB.COPY(AMCR0032)",
-        "sssss",
-        "aaaa"
+        "DESV.lib.copy(amcr0032)",
+        "qual.lib.copy(amcr0032)"
     ]
 }
