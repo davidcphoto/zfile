@@ -9,7 +9,9 @@
         "qual.lib.copy(amcr0032)"
     ],
     "zFile.Copybooks.ListOfPreviousCopybooks": [
+        "x93182.lib.copy(temp)",
         "DESV.lib.copy(amcr0032)",
         "qual.lib.copy(amcr0032)"
-    ]
+    ],
+    "javascript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false
 }

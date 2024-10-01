@@ -8,7 +8,7 @@ const zos_files = require("@zowe/zos-files-for-zowe-sdk");
 const path = require('path');
 const EBCDIC = require("ebcdic-ascii").default;
 const zPic = require("./zPicClass.js");
-const { match } = require('assert');
+const ebcdic_parser = require("ebcdic-parser");
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -32,16 +32,6 @@ function activate(context) {
 		const Ficheiro = node.label;
 		const sessao = node.mParent.session;
 
-
-		// const asciiToEbcdicTable = Conversor.asciiToEbcdicTable;
-		// const ebcdicToAsciiTable = Conversor.ebcdicToAsciiTable;
-		// const a = parseInt('1234C', 16);
-		// for (let i = 1; i < 17; i++) {
-		// 	console.log('teste ' + i + ' - ' + parseInt('0034530C', i));
-		// }
-
-		// console.log('ficheiro ' + lerFicheiroHex("C:/Users/d.fonseca.do.canto/Documents/Projectos/zFile/zFile/test/X93182.K.AMB00237.AMCR0032"));
-
 		SelecionarCopybook(sessao, Ficheiro);
 
 	});
@@ -64,32 +54,27 @@ function DownloadFicheiro(session, dataset) {
 
 	let datasetPath = '';
 
-	// (async () => {
 	datasetPath = obtPastaTemporaria(dataset);
 	const options = {
 		"file": datasetPath
 	};
 
 	zos_files.Download.dataSet(session, dataset, options);
+
 	return datasetPath;
 
-
-	// })().catch((err) => {
-	// 	console.error(err);
-	// 	process.exit(1);
-
-	// })
 };
 
-function lerFicheiroHex(Ficheiro) {
+// function lerFicheiroHex(Ficheiro) {
 
-	console.log('lerFicheiroHex');
+// 	console.log('lerFicheiroHex');
 
-	const ficheiroHex = fs.readFileSync(path.resolve(Ficheiro), "hex")
-	console.log('ficheiroHex ' + ficheiroHex);
-	return ficheiroHex;
+// 	const ficheiroHex = fs.readFileSync(path.resolve(Ficheiro), {"flag": "r" })
+// 	return ficheiroHex;
 
-}
+// }
+
+
 
 function lerFicheiroTxt(Ficheiro) {
 
@@ -99,7 +84,7 @@ function lerFicheiroTxt(Ficheiro) {
 	const Resposta = fs.readFileSync(Ficheiro, { encoding: 'utf8', flag: 'r' })
 
 	if (!Resposta) {
-		vscode.window.showErrorMessage('File ' +  + ' fot found');
+		vscode.window.showErrorMessage('File ' + Ficheiro + ' fot found');
 	}
 	return Resposta;
 }
@@ -108,63 +93,69 @@ function lerFicheiroTxt(Ficheiro) {
 function obtPastaTemporaria(ficheiro = '') {
 
 	const pastaTemp = vscode.workspace.getConfiguration().get('zowe.files.temporaryDownloadsFolder.path');
-	const ficheiroTemp = pastaTemp + '/ZfILE/'  + ficheiro;
+	const ficheiroTemp = pastaTemp + '/ZfILE/' + ficheiro;
 	console.log('ficheiro ' + ficheiroTemp);
 	return ficheiroTemp;
 
 }
 
-function abrirFicheiro(sessao, Ficheiro) {
+async function abrirFicheiro(sessao, Ficheiro) {
 
-	const datasetPath = DownloadFicheiro(sessao, Ficheiro)
+	// const datasetPath = DownloadFicheiro(sessao, Ficheiro)
 
-	const ficheiroHex = lerFicheiroHex(datasetPath);
-	console.log('ficheiroHex ' + ficheiroHex);
-	return ficheiroHex;
+	// const ficheiroHex = lerFicheiroHex(datasetPath);
+	// console.log('ficheiroHex ' + ficheiroHex);
+
+	// return ficheiroHex;
 
 
+	const FicheiroBinario = await zos_files.Get.dataSet(sessao, Ficheiro, { "binary": true })
+	console.log('binario ' + (await FicheiroBinario))
 
+	return FicheiroBinario;
 }
 
-function trataFicheiro(sessao, Ficheiro, Copybook, central=new Boolean) {
+function trataFicheiro(sessao, Ficheiro, Copybook, central = new Boolean) {
 
-	const ficheiro = abrirFicheiro(sessao, Ficheiro);
+	abrirFicheiro(sessao, Ficheiro).then(ficheiro => {
 
-	let copybook;
+		let copybook;
 
-	if (central) {
-		copybook = abreCopybook(sessao, Copybook);
-	} else {
-		copybook = abreCopybook('', Copybook);
+		if (central) {
+			copybook = abreCopybook(sessao, Copybook);
+		} else {
+			copybook = abreCopybook('', Copybook);
+		}
+
+
+
+		const dados = new dadosEcran(copybook, ficheiro);
+
+		const html = formataHTML(Ficheiro, Copybook, dados);
+
+		mostraFicheiro(html, Ficheiro);
 	}
-
-
-
-	const dados = new dadosEcran(copybook, ficheiro);
-
-	const html = formataHTML(Ficheiro, Copybook, dados);
-
-	mostraFicheiro(html, Ficheiro);
+	);
 
 }
 
 class dadosEcran {
 	constructor(CopyBook, Ficheiro) {
 
-		const PageBreak = '0d0a';
+		// const PageBreak = '0d0a';
+		// const fieldBreak = 'b0';
 
-
-		const Conversor = new EBCDIC("0037");
+		// const Conversor = new EBCDIC("1047");
 
 		this.Copybook = CopyBook;
 		this.Ficheiro = Ficheiro;
 		this.Cabecalho = [];
 		this.dados = [];
-		this.Linha = [];
+		// this.Linha = [];
 		this.lrec = CopyBook.Tamanho;
-		let Linha = [];
+		// let Linha = [];
 
-		Linha = Ficheiro.split(PageBreak);
+		// Linha = Ficheiro.split(PageBreak);
 
 		let Inicio = 0;
 		let Fim = 0;
@@ -178,7 +169,8 @@ class dadosEcran {
 			}
 		}
 
-		for (let j = 0; j < (Linha.length - 1); j++) {
+		// for (let j = 0; j < (Linha.length - 1); j++) {
+		for (let j = 0; j < Ficheiro.length/CopyBook.Tamanho; j++) {
 			let Reg = [];
 
 			for (let i = 0; i < CopyBook.Copy.length; i++) {
@@ -187,10 +179,10 @@ class dadosEcran {
 				if (element.Tipo != zPic.ValidaTipoCampo.Grupo) {
 
 					if (Fim == 0) {
-						Fim = element.Fim * 2;
+						Fim = element.Fim;
 					} else {
 						Inicio = Fim;
-						Fim += element.Tamanho * 2;
+						Fim += element.Tamanho;
 					}
 
 					console.log('----------------');
@@ -198,47 +190,43 @@ class dadosEcran {
 					let Alfa = '';
 
 
+					let AlfaArray = []
+
+					for (let K = Inicio; K < Fim; K++) {
+						AlfaArray.push(Ficheiro[K].toString(16));
+
+					}
+
 					switch (element.Tipo) {
 						case zPic.ValidaTipoCampo.Alfanumerico:
 						case zPic.ValidaTipoCampo.Display:
 						case zPic.ValidaTipoCampo.National:
-						case zPic.ValidaTipoCampo.Numerico:
 						case zPic.ValidaTipoCampo.NumericoFormatado:
-						case zPic.ValidaTipoCampo.NumericoSinal:
+						case zPic.ValidaTipoCampo.Numerico:
 
-							Alfa = Linha[j].substring(Inicio, Fim);
-							console.log('Alfa         ' + Alfa);
-							console.log('AlfatoEBCDIC ' + Conversor.toEBCDIC(Alfa));
+							// Trata Alfanumericos e numericos sem sinal
+							// Converte os pares hexadecimais em hexadecimal do central e depois converte para caracteres
 
-							const AlfaArray = Conversor.splitHex(Alfa);
-							console.log('AlfaArray ' + AlfaArray);
 							let Texto = '';
+
 							AlfaArray.forEach(CarHex => {
-								Texto += hextoEBCDIC(Conversor.toEBCDIC(CarHex));
+								Texto += hextoEBCDIC(CarHex);
 							})
 							Reg.push(Texto);
 							console.log('Texto        ' + Texto);
 							break;
 
-						case zPic.ValidaTipoCampo.Numerico:
 						case zPic.ValidaTipoCampo.NumericoSinal:
 
-							Alfa = Linha[j].substring(Inicio, Fim);
-							console.log('Alfa         ' + Alfa);
-							console.log('AlfatoEBCDIC ' + Conversor.toEBCDIC(Alfa));
+							// Trata numericos com sinal
 
-							const Numerico = Conversor.splitHex(Alfa);
-							console.log('Numerico ' + Numerico);
-							let NumericoTexto = '';
-							Numerico.forEach(CarHex => {
-								NumericoTexto += hextoEBCDIC(Conversor.toEBCDIC(CarHex));
+							let NumeroSinal = '';
+
+							AlfaArray.forEach(CarHex => {
+								NumeroSinal += hextoEBCDIC(CarHex);
 							})
-							let numericoTratado = Number(NumericoTexto);
 
-							if (element.decimais) {
-								numericoTratado = numericoTratado / (10 ** element.decimais);
-
-							}
+							const numericoTratado = ebcdic_parser.parse(NumeroSinal.toUpperCase(), element.decimais);
 
 							Reg.push(numericoTratado);
 							console.log('numericoTratado ' + numericoTratado);
@@ -246,26 +234,18 @@ class dadosEcran {
 
 						case zPic.ValidaTipoCampo.Comp3:
 
-							if (element.Tamanho > 4) {
-								Fim = Inicio + 16;
-							}
-							Alfa = Linha[j].substring(Inicio, Fim);
+							// Trata numericos comp-3
+
+							AlfaArray.forEach(CarHex => {
+								Alfa += CarHex;
+							})
+
 							console.log('Alfa         ' + Alfa);
-							console.log('AlfatoEBCDIC ' + Conversor.toEBCDIC(Alfa));
+							const CompTratado = converterNumerico(Alfa, element.decimais);
 
 
-							const Comp3 = Conversor.toEBCDIC(Alfa);
-							console.log('Comp3        ' + Comp3);
-							let Numero = Number(Comp3.substring(0, Alfa.length - 1));
-							if (Comp3.slice(-1) == 'D') {
-								Numero = -Numero;
-							}
-							if (element.decimais) {
-								Numero = Numero / (10 ** element.decimais);
-
-							}
-							Reg.push(Numero);
-							console.log('Numero       ' + Numero);
+							Reg.push(CompTratado);
+							console.log('CompTratado ' + CompTratado);
 
 							break;
 						default:
@@ -274,12 +254,52 @@ class dadosEcran {
 				}
 			}
 			this.dados.push(Reg);
-			Inicio = 0;
-			Fim = 0;
+			// Inicio = 0;
+			// Fim = 0;
 		}
 	}
 }
 
+function converterNumerico(Comp_3='', decimais=0) {
+
+	let valor = Number(Comp_3.substring(0,Comp_3.length - 1));
+	const Sinal = Comp_3.substring(Comp_3.length - 1);
+	if (Sinal == 'D' || Sinal == 'd') {
+		valor = -valor;
+	}
+	valor = valor/(10 ** decimais);
+
+	return valor;
+}
+
+// function ConverterNumero(Alfa = '') {
+
+// 	const Conversor = new EBCDIC("1047");
+// 	const AlfaTratado = Alfa.match(/.{1,8}/g);
+// 	let Comp3Total = '';
+
+// 	for (let i = 0; i < AlfaTratado.length; i++) {
+// 		const element = AlfaTratado[i];
+// 		console.log('Conversor.toEBCDIC     ' + Conversor.toEBCDIC(element));
+// 		const Comp3 = Conversor.toEBCDIC(element);
+// 		console.log('Comp3        ' + Comp3);
+// 		Comp3Total += Comp3;
+// 	}
+
+// 	const splitHex = Conversor.splitHex(Alfa)
+// 	splitHex.forEach(element => {
+// 		console.log('Conversor.splitHex     ' + element);
+// 		console.log('splitHex to EBCDIC ' + Conversor.toEBCDIC(element));
+
+// 	});
+
+// 	let Numero = Number(Comp3Total.substring(0, Alfa.length - 1));
+
+// 	if (Comp3Total.slice(Comp3Total.length - 1, Comp3Total.length) == 'D') {
+// 		Numero = -Numero;
+// 	}
+// 	return Numero;
+// }
 function abreCopybook(sessao, ficheiro) {
 
 	let datasetPath;
@@ -314,8 +334,8 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 
 	const novos = [
 		{ label: 'Select copybook', kind: vscode.QuickPickItemKind.Separator },
-		{ label: 'Select Copybook from my Workstation '+desktopIcon},
-		{ label: 'Select Copybook from ' + zosmfProfAttrs.profName + ' '+remoteIcon}
+		{ label: 'Select Copybook from my Workstation ' + desktopIcon },
+		{ label: 'Select Copybook from ' + zosmfProfAttrs.profName + ' ' + remoteIcon }
 	]
 	const Separador = {
 		label: 'Previous Mainframe Copybooks',
@@ -420,7 +440,7 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 						placeHolder: "HLQ.LIB.COPY(COPYBOOK)",
 						value: "",
 						title: "Copybook to read file",
-		           }).then((value) => {
+					}).then((value) => {
 
 						if (!choices.includes(value)) {
 
@@ -447,10 +467,10 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 
 				case quickPick.selectedItems[0].label.startsWith(remoteIcon):
 
-					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(remoteIcon.length+1), true)
+					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(remoteIcon.length + 1), true)
 					break;
 
-			    // default:
+				// default:
 				//     trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12),true)
 			}
 			quickPick.hide();
@@ -512,7 +532,8 @@ function hextoEBCDIC(hex) {
 
 function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
-	let Cabecalho='';
+	let Cabecalho = '<th>#</th>';
+	const Save = '$(save)';
 
 	for (let i = 0; i < dados.Cabecalho.length; i++) {
 		const element = '<th>' + dados.Cabecalho[i] + '</th>';
@@ -523,10 +544,10 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	for (let i = 0; i < dados.dados.length; i++) {
 
-		let Linha = '';
+		let Linha = '<td class="numeros">' + i + '</td>';
 
 		for (let j = 0; j < dados.dados[i].length; j++) {
-			const element = '<td>' + dados.dados[i][j] + '</td>';
+			const element = '<td><input value="' + dados.dados[i][j] + '"></td>';
 			Linha += element;
 		}
 
@@ -554,10 +575,33 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 top: 0;
 				left:0;
                 text-align: center;
+                background-color: var(--vscode-button-secondaryHoverBackground);
             }
 
 			h3 {
                 text-align: right;
+				right=0;
+			}
+
+			.botoes {
+                text-align: right;
+				display: block;
+                position: relative;
+
+			}
+
+			.botao {
+			    display: block;
+                position: relative;
+                background-color: var(--vscode-button-secondaryHoverBackground);
+		        color: var(--vscode-button-secondaryForeground);
+                box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+			}
+
+			botao:active {
+                background-color: var(--vscode-button-secondaryHoverBackground);
+		        color: var(--vscode-button-secondaryForeground);
+                box-shadow: none;
 			}
 
             #corpo {
@@ -582,13 +626,16 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 padding: 8px;
             }
 
-            tr {
-                background-color: var(--vscode-button-secondaryHoverBackground);
+            input {
+                background-color: var(--vscode-list-hoverBackground);
+				color: var(--vscode-list-activeSelectionForeground);
+                text-align: center;
+                padding: 8px;
+				border:none;
             }
 
-            td {
-                background-color: var(--vscode-list-hoverBackground);
-                padding: 8px;
+            tr, #numeros {
+                background-color: var(--vscode-button-secondaryHoverBackground);
             }
 
         </style>
@@ -600,6 +647,11 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             <div>
                 <h1>zFile</h1>
             </div>
+			<div class=botoes>
+			    <div class=botao>$(save)</div>
+			    <div class=botao>$(csv)</div>
+			    <div class=botao>$(refresh)</div>
+			</div>
         </div>
         <div id="corpo">
             <table>
@@ -611,6 +663,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
         </div>
 		<div>
             <h3>Copybook: ${Copybook}</h3>
+			<button type="button"></button>
 		</div>
     </div>
 </body>
@@ -618,20 +671,17 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 </html>
 `
 
-return HTML;
+	return HTML;
 
 }
 
 function mostraFicheiro(html, Ficheiro) {
 
 	let painel;
-	painel = vscode.window.createWebviewPanel('zFile', Ficheiro,1);
+	painel = vscode.window.createWebviewPanel('zFile', Ficheiro, 1);
 	painel.webview.options = {
 		enableScripts: true,
 
 	};
 	painel.webview.html = html;
-	// painel.webview.onDidReceiveMessage(message => {
-	// 	abreElemento(message);
-	// })
 }

@@ -4,7 +4,8 @@
 exports.Copybook = class {
     constructor(Ficheiro = new String) {
 
-        const FicheiroLinhas = Ficheiro.split('.');
+        const fichTemp = removeSeqnumAste(Ficheiro);
+        const FicheiroLinhas = fichTemp.split('.');
         let copy = [];
         let inicio = 1
         let inicioBruto = 1;
@@ -23,6 +24,28 @@ exports.Copybook = class {
 }
 
 
+function removeSeqnumAste(fullText) {
+
+    let fullTextArray = fullText.split(/\r?\n|\r|\n/g);
+
+    let resultado = '';
+
+    for (let i = 0; i < fullTextArray.length; ++i) {
+
+
+        if (fullTextArray[i].trim().length > 6) {
+
+            if (fullTextArray[i].substring(6, 7) != '*' && fullTextArray[i].substring(7, 72).trim().length > 0) {
+
+                resultado = resultado + fullTextArray[i].substring(7, 72);
+
+            }
+        }
+    }
+    return resultado;
+}
+
+
 class Linha {
     constructor(linha, inicio, inicioBruto) {
 
@@ -33,6 +56,7 @@ class Linha {
         let posValor = 0;
         let posTemDecimais = 0;
         let posDecimais = 0;
+        this.decimais = 0;
 
         this.Redefines = linha.includes("REDEFINES");
         let linhaSeparada = linha.split(/[\s()]+/);
@@ -225,6 +249,9 @@ function validaNumericos(Linha = new String) {
             break;
         case Linha.includes(' BINARY'):
             resultado = TipoCampo.Binary;
+            break;
+        case Linha.includes(' S9('):
+            resultado = TipoCampo.NumericoSinal;
             break;
         default:
             resultado = TipoCampo.Numerico;
