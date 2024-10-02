@@ -5,8 +5,8 @@ const fs = require('fs');
 const zowe_explorer_api = require('@zowe/zowe-explorer-api');
 const Imperative = require("@zowe/imperative");
 const zos_files = require("@zowe/zos-files-for-zowe-sdk");
-const path = require('path');
-const EBCDIC = require("ebcdic-ascii").default;
+// const path = require('path');
+// const EBCDIC = require("ebcdic-ascii").default;
 const zPic = require("./zPicClass.js");
 const ebcdic_parser = require("ebcdic-parser");
 
@@ -48,115 +48,75 @@ module.exports = {
 }
 
 
-function DownloadFicheiro(session, dataset) {
-
-	console.log('DownloadFicheiro');
-
-	let datasetPath = '';
-
-	datasetPath = obtPastaTemporaria(dataset);
-	const options = {
-		"file": datasetPath
-	};
-
-	zos_files.Download.dataSet(session, dataset, options);
-
-	return datasetPath;
-
-};
-
-// function lerFicheiroHex(Ficheiro) {
-
-// 	console.log('lerFicheiroHex');
-
-// 	const ficheiroHex = fs.readFileSync(path.resolve(Ficheiro), {"flag": "r" })
-// 	return ficheiroHex;
-
-// }
-
-
 
 function lerFicheiroTxt(Ficheiro) {
 
 	console.log('lerFicheiroTxt ' + Ficheiro);
 
-	// const Resposta = fs.readFileSync(path.resolve(Ficheiro), { encoding: 'utf8', flag: 'r' })
 	const Resposta = fs.readFileSync(Ficheiro, { encoding: 'utf8', flag: 'r' })
 
 	if (!Resposta) {
 		vscode.window.showErrorMessage('File ' + Ficheiro + ' fot found');
 	}
-	return Resposta;
+	return new zPic.Copybook(Resposta);
 }
 
 
-function obtPastaTemporaria(ficheiro = '') {
-
-	const pastaTemp = vscode.workspace.getConfiguration().get('zowe.files.temporaryDownloadsFolder.path');
-	const ficheiroTemp = pastaTemp + '/ZfILE/' + ficheiro;
-	console.log('ficheiro ' + ficheiroTemp);
-	return ficheiroTemp;
-
-}
-
-async function abrirFicheiro(sessao, Ficheiro) {
-
-	// const datasetPath = DownloadFicheiro(sessao, Ficheiro)
-
-	// const ficheiroHex = lerFicheiroHex(datasetPath);
-	// console.log('ficheiroHex ' + ficheiroHex);
-
-	// return ficheiroHex;
-
+/////////////////////////////////////////////////////////////////////
+async function abrirFicheiroBin(sessao, Ficheiro) {
 
 	const FicheiroBinario = await zos_files.Get.dataSet(sessao, Ficheiro, { "binary": true })
-	console.log('binario ' + (await FicheiroBinario))
+	console.log('binario ' + FicheiroBinario)
 
 	return FicheiroBinario;
 }
 
-function trataFicheiro(sessao, Ficheiro, Copybook, central = new Boolean) {
+/////////////////////////////////////////////////////////////////////
+async function abrirFicheiroTXT(sessao, Ficheiro) {
 
-	abrirFicheiro(sessao, Ficheiro).then(ficheiro => {
+	const FicheiroBinario = (await zos_files.Get.dataSet(sessao, Ficheiro)).toString();
+	console.log('record ' + FicheiroBinario)
 
-		let copybook;
-
-		if (central) {
-			copybook = abreCopybook(sessao, Copybook);
-		} else {
-			copybook = abreCopybook('', Copybook);
-		}
-
-
-
-		const dados = new dadosEcran(copybook, ficheiro);
-
-		const html = formataHTML(Ficheiro, Copybook, dados);
-
-		mostraFicheiro(html, Ficheiro);
-	}
-	);
-
+	return FicheiroBinario;
 }
 
+/////////////////////////////////////////////////////////////////////
+function trataFicheiro(sessao, Ficheiro, Copybook, central = new Boolean) {
+
+	abrirFicheiroBin(sessao, Ficheiro).then(ficheiro => {
+
+		if (central) {
+
+			trataCopybook(sessao, Copybook).then(copybook => {
+				const dados = new dadosEcran(copybook, ficheiro);
+
+				const html = formataHTML(Ficheiro, Copybook, dados);
+
+				mostraFicheiro(html, Ficheiro);
+			})
+
+		} else {
+
+			const copybook = lerFicheiroTxt(Copybook);
+			const dados = new dadosEcran(copybook, ficheiro);
+
+			const html = formataHTML(Ficheiro, Copybook, dados);
+
+			mostraFicheiro(html, Ficheiro);
+		}
+	})
+}
+
+/////////////////////////////////////////////////////////////////////
 class dadosEcran {
-	constructor(CopyBook, Ficheiro) {
+	constructor(CopyBook = new zPic.Copybook, Ficheiro) {
 
-		// const PageBreak = '0d0a';
-		// const fieldBreak = 'b0';
-
-		// const Conversor = new EBCDIC("1047");
 
 		this.Copybook = CopyBook;
 		this.Ficheiro = Ficheiro;
 		this.Cabecalho = [];
 		this.dados = [];
-		// this.Linha = [];
 		this.lrec = CopyBook.Tamanho;
-		// let Linha = [];
-
-		// Linha = Ficheiro.split(PageBreak);
-
 		let Inicio = 0;
 		let Fim = 0;
 
@@ -170,7 +130,7 @@ class dadosEcran {
 		}
 
 		// for (let j = 0; j < (Linha.length - 1); j++) {
-		for (let j = 0; j < Ficheiro.length/CopyBook.Tamanho; j++) {
+		for (let j = 0; j < Ficheiro.length / CopyBook.Tamanho; j++) {
 			let Reg = [];
 
 			for (let i = 0; i < CopyBook.Copy.length; i++) {
@@ -254,72 +214,32 @@ class dadosEcran {
 				}
 			}
 			this.dados.push(Reg);
-			// Inicio = 0;
-			// Fim = 0;
 		}
 	}
 }
 
-function converterNumerico(Comp_3='', decimais=0) {
+/////////////////////////////////////////////////////////////////////
+function converterNumerico(Comp_3 = '', decimais = 0) {
 
-	let valor = Number(Comp_3.substring(0,Comp_3.length - 1));
+	let valor = Number(Comp_3.substring(0, Comp_3.length - 1));
 	const Sinal = Comp_3.substring(Comp_3.length - 1);
 	if (Sinal == 'D' || Sinal == 'd') {
 		valor = -valor;
 	}
-	valor = valor/(10 ** decimais);
+	valor = valor / (10 ** decimais);
 
 	return valor;
 }
 
-// function ConverterNumero(Alfa = '') {
 
-// 	const Conversor = new EBCDIC("1047");
-// 	const AlfaTratado = Alfa.match(/.{1,8}/g);
-// 	let Comp3Total = '';
+/////////////////////////////////////////////////////////////////////
+async function trataCopybook(sessao, datasetPath) {
 
-// 	for (let i = 0; i < AlfaTratado.length; i++) {
-// 		const element = AlfaTratado[i];
-// 		console.log('Conversor.toEBCDIC     ' + Conversor.toEBCDIC(element));
-// 		const Comp3 = Conversor.toEBCDIC(element);
-// 		console.log('Comp3        ' + Comp3);
-// 		Comp3Total += Comp3;
-// 	}
-
-// 	const splitHex = Conversor.splitHex(Alfa)
-// 	splitHex.forEach(element => {
-// 		console.log('Conversor.splitHex     ' + element);
-// 		console.log('splitHex to EBCDIC ' + Conversor.toEBCDIC(element));
-
-// 	});
-
-// 	let Numero = Number(Comp3Total.substring(0, Alfa.length - 1));
-
-// 	if (Comp3Total.slice(Comp3Total.length - 1, Comp3Total.length) == 'D') {
-// 		Numero = -Numero;
-// 	}
-// 	return Numero;
-// }
-function abreCopybook(sessao, ficheiro) {
-
-	let datasetPath;
-
-	if (sessao) {
-		const Path = DownloadFicheiro(sessao, ficheiro)
-		datasetPath = path.resolve(Path);
-	} else {
-		datasetPath = String(ficheiro);
-	}
-
-
-	const Copybook = lerFicheiroTxt(datasetPath)
-	console.log('Copybook ' + Copybook);
-
-	const CopyZPic = new zPic.Copybook(Copybook);
-	console.log(CopyZPic.Copy);
-	return CopyZPic;
+	const copybook = await abrirFicheiroTXT(sessao, datasetPath)
+	return new zPic.Copybook(copybook);
 }
 
+/////////////////////////////////////////////////////////////////////
 async function SelecionarCopybook(sessao, Ficheiro) {
 
 
@@ -469,10 +389,7 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 
 					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(remoteIcon.length + 1), true)
 					break;
-
-				// default:
-				//     trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(12),true)
-			}
+	}
 			quickPick.hide();
 
 		})
@@ -485,6 +402,7 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 }
 
 
+/////////////////////////////////////////////////////////////////////
 function hextoEBCDIC(hex) {
 
 	// let quadro0 = ['NUL', 'SOH', 'STX', 'ETX', 'SEL', 'HT', 'RNL', 'DEL', 'GE', 'SPS', 'RPT', 'VT', 'FF', 'CR', 'SO', 'SI'];
@@ -530,10 +448,11 @@ function hextoEBCDIC(hex) {
 
 }
 
+/////////////////////////////////////////////////////////////////////
 function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	let Cabecalho = '<th>#</th>';
-	const Save = '$(save)';
+	// const Save = '$(save)';
 
 	for (let i = 0; i < dados.Cabecalho.length; i++) {
 		const element = '<th>' + dados.Cabecalho[i] + '</th>';
@@ -675,6 +594,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 }
 
+/////////////////////////////////////////////////////////////////////
 function mostraFicheiro(html, Ficheiro) {
 
 	let painel;
