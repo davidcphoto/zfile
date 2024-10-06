@@ -3,6 +3,23 @@
   "displayName": "zFile",
   "description": "File reader/editor for mainframe",
   "version": "0.0.1",
+  "publisher": "DavidCanto",
+  "repository": {
+    "url": "https://github.com/davidcphoto/zFile"
+  },
+  "keywords": [
+    "cobol",
+    "jcl",
+    "mainframe",
+    "David Canto",
+    "zos",
+    "comp-3",
+    "ebcdic",
+    "flat file",
+    "file manager",
+    "copybook"
+  ],
+  "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -18,8 +35,17 @@
         "title": "zFile - Open File"
       },
       {
-        "command": "zfile.test",
-        "title": "zFile - teste"
+        "command": "zfile.Save",
+        "title": "zFile - Save",
+        "enablement": "false"
+      },
+      {
+        "command": "zfile.Edit",
+        "title": "zFile - Edit"
+      },
+      {
+        "command": "zfile.Export",
+        "title": "zFile - Export"
       }
     ],
     "menus": {
@@ -29,11 +55,35 @@
           "command": "zfile.OpenFile",
           "group": "910_zfile01"
         }
+      ],
+      "webview/context": [
+        {
+          "command": "zfile.Save",
+          "when": "webviewId == zFile",
+          "group": "911_zfile@1"
+        },
+        {
+          "command": "zfile.Edit",
+          "when": "webviewId == zFile",
+          "group": "911_zfile@2"
+        },
+        {
+          "command": "zfile.Export",
+          "when": "webviewId == zFile",
+          "group": "911_zfile@3"
+        }
       ]
     },
     "configuration": {
       "title": "zFile",
       "properties": {
+        "zFile.NumberOfRecords": {
+          "type": "integer",
+          "description": "Number of records to present in the view",
+          "default": 100,
+          "order": 1,
+          "minimum": 1
+        },
         "zFile.Copybooks.NumberOfPreviousCopybooks": {
           "type": "integer",
           "description": "Number of previous selected Copybooks to list on the quick pick",
@@ -83,10 +133,10 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.36",
     "@zowe/imperative": "^5.27.1",
     "@zowe/zos-files-for-zowe-sdk": "^7.29.2",
     "@zowe/zowe-explorer-api": "^2.18.0",
-    "ebcdic-ascii": "^1.1.3",
     "ebcdic-parser": "^1.0.0"
   }
 }

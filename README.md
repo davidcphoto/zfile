@@ -1,35 +1,36 @@
 # zfile README
 
-This is the README for your extension "zfile". After writing up a brief description, we recommend including the following sections.
+Vscode extension to view mainframe files with copybook defined fields.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+Read mainframe files with:
 
-For example if there is an image subfolder under your extension project workspace:
+- Alphanumeric fields
+- Numeric fields
+- Signed numeric fields
+- Comp-3 numeric fields-
 
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+> Tip: other numeric fields will be added soon.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Zowe explorer
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+* `zFile.NumberOfRecords`: Number os records read from a file.
+* `zFile.Copybooks.NumberOfPreviousCopybooks`: Number of copybooks previously selected to be represented when the file is opened. Default value of 5 and max value of 20.
+* `zFile.Copybooks.ListOfPreviousCopybooks`: List of copybooks previously selected from the mainframe.
+* `zFile.Copybooks.ListOfPreviousWorksationCopybooks`: List of copybooks previously selected from the workstation.
+
+>Info: The Number of Previous Copybooks is the same for the 2 lists
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+Numerics comp-3
 
 ## Release Notes
 
@@ -37,29 +38,4 @@ Users appreciate release notes as you update your extension.
 
 ### 1.0.0
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Initial release of zFile
