@@ -5,11 +5,12 @@ const fs = require('fs');
 const zowe_explorer_api = require('@zowe/zowe-explorer-api');
 const Imperative = require("@zowe/imperative");
 const zos_files = require("@zowe/zos-files-for-zowe-sdk");
-// const path = require('path');
-// const EBCDIC = require("ebcdic-ascii").default;
 const zPic = require("./zPicClass.js");
 const ebcdic_parser = require("ebcdic-parser");
 const { error } = require('console');
+
+// let myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
+
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -28,8 +29,6 @@ function activate(context) {
 	// The commandId parameter must match the command field in package.json
 	let disposable = vscode.commands.registerCommand('zfile.OpenFile', function (node = zowe_explorer_api.ZoweTreeNode) {
 		// The code you place here will be executed every time your command is executed
-
-
 		const Ficheiro = node.label;
 		const sessao = node.mParent.session;
 
@@ -50,8 +49,10 @@ function activate(context) {
 		vscode.window.showInformationMessage("Export");
 	});
 	let disposableEdit = vscode.commands.registerCommand('zfile.Edit', function () {
-		vscode.window.showInformationMessage("Export");
+		vscode.window.showInformationMessage("Edit");
 	});
+
+
 	context.subscriptions.push(disposable);
 	context.subscriptions.push(disposableSave);
 	context.subscriptions.push(disposableEdit);
@@ -70,17 +71,12 @@ module.exports = {
 
 function lerFicheiroTxt(Ficheiro) {
 
+
 	console.log('lerFicheiroTxt ' + Ficheiro);
 
+	const copybook = fs.readFileSync(Ficheiro, { encoding: 'utf-8' })
 
-	fs.readFile(Ficheiro, 'utf8', (err, data) => {
-		if (err) {
-			console.error(err);
-			vscode.window.showErrorMessage(err.message)
-			error(1);
-		}
-		return data;
-	});
+	return copybook;
 
 }
 
@@ -106,22 +102,29 @@ async function abrirFicheiroTXT(sessao, Ficheiro) {
 /////////////////////////////////////////////////////////////////////
 function trataFicheiro(sessao, Ficheiro, Copybook, central = new Boolean) {
 
-	abrirFicheiroBin(sessao, Ficheiro).then(ficheiro => {
 
-		if (central) {
+		abrirFicheiroBin(sessao, Ficheiro).then(ficheiro => {
 
-			trataCopybook(sessao, Copybook).then(copybook => {
-				trataDados(Ficheiro, Copybook, copybook, ficheiro)
-			}).catch(err => {
-				vscode.window.showErrorMessage(err)
-			})
+			if (central) {
 
-		} else {
+				trataCopybook(sessao, Copybook).then(copybook => {
 
-			const copybook = lerFicheiroTxt(Copybook);
-			trataDados(Ficheiro, Copybook, copybook, ficheiro)
-		}
-	})
+					trataDados(Ficheiro, Copybook, copybook, ficheiro)
+
+				}).catch(err => {
+					vscode.window.showErrorMessage(err)
+				})
+
+			} else {
+
+				const copybook = lerFicheiroTxt(Copybook);
+
+				const Copy = new zPic.Copybook(copybook);
+				trataDados(Ficheiro, Copybook, Copy, ficheiro)
+
+			}
+		})
+
 }
 
 function trataDados(NomeFicheiro, NomeCopybook, copybook, ficheiro) {
@@ -192,10 +195,22 @@ class dadosEcran {
 
 
 						let AlfaArray = []
+						let negativo = false;
+
+						if (Ficheiro[Inicio] == 255) {
+							negativo = true;
+						}
 
 						for (let K = Inicio; K < Fim; K++) {
-							AlfaArray.push(Ficheiro[K].toString(16));
-
+							if (negativo) {
+								if (K < Fim - 1) {
+									AlfaArray.push((255 - Ficheiro[K]).toString(16));
+								} else {
+									AlfaArray.push((256 - Ficheiro[K]).toString(16));
+								}
+							} else {
+								AlfaArray.push(Ficheiro[K].toString(16));
+							}
 						}
 
 						switch (element.Tipo) {
@@ -227,10 +242,15 @@ class dadosEcran {
 									NumeroSinal += hextoEBCDIC(CarHex);
 								})
 
-								const numericoTratado = ebcdic_parser.parse(NumeroSinal.toUpperCase(), element.decimais);
+								// Nota: O ebcdic_parser não trata corretamente as casas decimais e por defeito
+								//       assume sempre 2 casas decimais por isso multiplico por 100 e valido as casas
+								//       decimais depois
+								const numericoTratado = ebcdic_parser.parse(NumeroSinal) * 100;
 
-								Reg.push(numericoTratado);
-								console.log('numericoTratado ' + numericoTratado);
+								const numericoTratadodecimais = acertaDecimais(numericoTratado, element.decimais);
+								Reg.push(numericoTratadodecimais);
+
+								console.log('numericoTratadodecimais ' + numericoTratadodecimais);
 								break;
 
 							case zPic.ValidaTipoCampo.Comp3:
@@ -249,8 +269,36 @@ class dadosEcran {
 								console.log('CompTratado ' + CompTratado);
 
 								break;
+
+							case zPic.ValidaTipoCampo.Binary:
+							case zPic.ValidaTipoCampo.Comp:
+							case zPic.ValidaTipoCampo.Comp2:
+							case zPic.ValidaTipoCampo.Comp4:
+							case zPic.ValidaTipoCampo.Comp5:
+
+								let AlfaCarHex = ''
+
+								AlfaArray.forEach(CarHex => {
+									if (CarHex.length == 1) {
+										AlfaCarHex = CarHex;
+										Alfa += '0' + AlfaCarHex;
+									} else {
+										Alfa += CarHex;
+									}
+								})
+
+								let numerico = parseInt(Alfa, 16);
+								if (negativo) {
+									numerico = -numerico;
+								}
+								numerico = acertaDecimais(numerico, element.decimais)
+								console.log('numero - ' + numerico)
+								Reg.push(numerico);
+
+								break
+
 							default:
-								console.log(i + ' - ' + Alfa)
+								console.log(i + ' - ' + AlfaArray)
 						}
 					}
 				}
@@ -268,9 +316,16 @@ function converterNumerico(Comp_3 = '', decimais = 0) {
 	if (Sinal == 'D' || Sinal == 'd') {
 		valor = -valor;
 	}
-	valor = valor / (10 ** decimais);
+	// valor = valor / (10 ** decimais);
+	valor = acertaDecimais(valor, decimais);
 
 	return valor;
+}
+/////////////////////////////////////////////////////////////////////
+function acertaDecimais(Numero = 0, decimais = 0) {
+
+	return Numero / (10 ** decimais);
+
 }
 
 
@@ -316,11 +371,11 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 		quickPick.items = novos;
 		if (choices) {
 			quickPick.items = quickPick.items.concat(Separador);
-			quickPick.items = quickPick.items.concat(choices.map(choice => ({ label: remoteIcon + ' ' + choice })));
+			quickPick.items = quickPick.items.concat(choices.map(choice => ({ label: remoteIcon + ' ' + String(choice).match(/\((.*)\)/).pop(), description: choice })));
 		}
 		if (choicesPC) {
 			quickPick.items = quickPick.items.concat(SeparadorPC);
-			quickPick.items = quickPick.items.concat(choicesPC.map(choice => ({ label: desktopIcon + ' ' + choice })));
+			quickPick.items = quickPick.items.concat(choicesPC.map(choice => ({ label: desktopIcon + ' ' + String(choice).split('\\').pop().split('/').pop(), description: choice })));
 		}
 		quickPick.value = "";
 		quickPick.title = 'Select copybook';
@@ -424,12 +479,14 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 
 				case quickPick.selectedItems[0].label.startsWith(desktopIcon):
 
-					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(desktopIcon.length).trim(), false)
+					// trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(desktopIcon.length).trim(), false)
+					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].description, false)
 					break;
 
 				case quickPick.selectedItems[0].label.startsWith(remoteIcon):
 
-					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(remoteIcon.length + 1), true)
+					// trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].label.substring(remoteIcon.length + 1), true)
+					trataFicheiro(sessao, Ficheiro, quickPick.selectedItems[0].description, true)
 					break;
 			}
 			quickPick.hide();
@@ -496,12 +553,12 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 	let Cabecalho = '<th>#</th>';
 	// const Save = '$(save)';
 
-	let LinhaVazia = '<td class="numeros"></td>';
+	// let LinhaVazia = '<td class="numeros"></td>';
 	for (let i = 0; i < dados.Cabecalho.length; i++) {
 		const element = '<th>' + dados.Cabecalho[i] + '</th>';
 		Cabecalho += element;
-		const vazio = '<td><input value="" ></td>';
-		LinhaVazia += vazio;
+		// const vazio = '<td><input value="" ></td>';
+		// LinhaVazia += vazio;
 	}
 
 	let Corpo = '';
@@ -511,7 +568,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 		let Linha = '<td class="numeros">' + i + '</td>';
 
 		for (let j = 0; j < dados.dados[i].length; j++) {
-			const element = '<td><input name="tabela" value="' + dados.dados[i][j] + '"></td>';
+			const element = `<td><input name="tabela" value="` + dados.dados[i][j] + `" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
 			Linha += element;
 		}
 
@@ -605,13 +662,29 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             }
 
         </style>
+		<script>
+
+	        const vscode = acquireVsCodeApi();
+
+			function getDados() {
+                const tabela = document.getElementsByName("tabela");
+                let retorno = [];
+                for (let i = 0; i < tabela.length; i++) {
+                  retorno.push(tabela[i].value);
+                }
+				const msgRetorno = '{"Salvar":' + JSON.stringify(retorno) + '}';
+				console.log(msgRetorno);
+	            vscode.postMessage(msgRetorno);
+			}
+		</script>
 </head>
 
-<body>
+<body data-vscode-context='{"webviewSection": "editor", "preventDefaultContextMenuItems": true}'>
     <div id="total">
         <div id="cabecalho">
             <div>
                 <h1>zFile - ${Ficheiro}</h1>
+				<a href="#" onclick="getDados()">teste</a>
 	        </div>
 		</div>
         <div id="corpo">
@@ -633,6 +706,11 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	return HTML;
 
+	// function teste() {
+
+	// }
+
+
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -642,11 +720,11 @@ function mostraFicheiro(html, Ficheiro) {
 	painel = vscode.window.createWebviewPanel('zFile', Ficheiro, 1);
 	painel.webview.options = {
 		enableScripts: true,
-
-
 	};
 	painel.webview.html = html;
-	// painel.webview.onDidReceiveMessage(mensagem => {
-
-	// })
+	painel.webview.onDidReceiveMessage(mensagem => {
+		console.log(mensagem);
+	})
 }
+
+/////////////////////////////////////////////////////////////////////

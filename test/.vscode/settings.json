@@ -1,11 +1,8 @@
 {
-    "zFile.Copybooks.ListOfPreviousSearchFilters": [
-        "aaaasssss",
-        "accdc"
-    ],
     "zFile.Copybooks.ListOfPreviousWorksationCopybooks": [
+        "C:\\Users\\d.fonseca.do.canto\\Documents\\VS-Code Workspace\\Copy\\temp.cpy",
+        "C:\\Users\\d.fonseca.do.canto\\Documents\\VS-Code Workspace\\.c4z\\temp\\_D_\\zosmf\\DESV.LIB.COPY(AMCR0032).cpy",
         "C:\\Users\\d.fonseca.do.canto\\Documents\\VS-Code Workspace\\.c4z\\zSearch\\[object Object]\\DESV.LIB.COPY(AMCR0032)",
-        null,
         "qual.lib.copy(amcr0032)"
     ],
     "zFile.Copybooks.ListOfPreviousCopybooks": [
@@ -13,5 +10,7 @@
         "DESV.lib.copy(amcr0032)",
         "qual.lib.copy(amcr0032)"
     ],
-    "javascript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false
+    "javascript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false,
+    "typescript.preferences.organizeImports": {
+    }
 }

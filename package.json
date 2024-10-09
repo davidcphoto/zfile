@@ -19,7 +19,7 @@
     "file manager",
     "copybook"
   ],
-  "icon": "images/icon.png",
+  "icon": "imagens/zFile.png",
   "engines": {
     "vscode": "^1.93.0"
   },

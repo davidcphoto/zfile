@@ -47,7 +47,7 @@ function removeSeqnumAste(fullText) {
 
 
 class Linha {
-    constructor(linha, inicio, inicioBruto) {
+    constructor(Linha, inicio, inicioBruto) {
 
         const posNivel = 0;
         let posVariavel = 1;
@@ -58,6 +58,7 @@ class Linha {
         let posDecimais = 0;
         this.decimais = 0;
 
+        const linha = Linha.toUpperCase();
         this.Redefines = linha.includes("REDEFINES");
         let linhaSeparada = linha.split(/[\s()]+/);
 
