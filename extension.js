@@ -9,6 +9,28 @@ const zPic = require("./zPicClass.js");
 const ebcdic_parser = require("ebcdic-parser");
 const { error } = require('console');
 
+
+const quadro = [
+	['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+	['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+	['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+	['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+	[' ', '.', '.', '.', '.', '.', '.', '.', '.', '.', '¢', '.', '<', '(', '+', '|'],
+	['&', '.', '.', '.', '.', '.', '.', '.', '.', '.', '!', '$', '*', ')', ';', '¬'],
+	['-', '/', '.', '.', '.', '.', '.', '.', '.', '.', '¦', ',', '%', '_', '>', '?'],
+	['.', '.', '.', '.', '.', '.', '.', '.', '.', '`', ':', '#', '@', "'", '=', '"'],
+	['.', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '.', '.', '.', '.', '.', '±'],
+	['.', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', '.', '.', '.', '.', '.', '.'],
+	['.', '~', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '.', '.', '.', '.', '.'],
+	['^', '.', '.', '.', '.', '.', '.', '.', '.', '.', '[', ']', '.', '.', '.', '.'],
+	['{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '.', '.', '.', '.', '.', '.'],
+	['}', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', '.', '.', '.', '.', '.', '.'],
+	['\\', '.', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '.', '.', '.', '.', '.', '.'],
+	['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '.', '.', '.', '.', '.']
+];
+
+let DadosUsados;
+
 // let myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
 
 
@@ -19,6 +41,7 @@ const { error } = require('console');
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
+
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
@@ -42,6 +65,12 @@ function activate(context) {
 
 	let disposableSave = vscode.commands.registerCommand('zfile.Save', function () {
 		vscode.window.showInformationMessage("save");
+
+		if (DadosUsados) {
+
+			DadosUsados.Copy
+
+		}
 
 
 	});
@@ -103,55 +132,62 @@ async function abrirFicheiroTXT(sessao, Ficheiro) {
 function trataFicheiro(sessao, Ficheiro, Copybook, central = new Boolean) {
 
 
-		abrirFicheiroBin(sessao, Ficheiro).then(ficheiro => {
+	abrirFicheiroBin(sessao, Ficheiro).then(ficheiro => {
 
-			if (central) {
+		if (central) {
 
-				trataCopybook(sessao, Copybook).then(copybook => {
+			trataCopybook(sessao, Copybook).then(copybook => {
 
-					trataDados(Ficheiro, Copybook, copybook, ficheiro)
+				trataDados(Ficheiro, Copybook, copybook, ficheiro)
 
-				}).catch(err => {
-					vscode.window.showErrorMessage(err)
-				})
+			}).catch(err => {
+				vscode.window.showErrorMessage(err)
+			})
 
-			} else {
+		} else {
 
-				const copybook = lerFicheiroTxt(Copybook);
+			const copybook = lerFicheiroTxt(Copybook);
 
-				const Copy = new zPic.Copybook(copybook);
-				trataDados(Ficheiro, Copybook, Copy, ficheiro)
+			const Copy = new zPic.Copybook(copybook);
+			trataDados(Ficheiro, Copybook, Copy, ficheiro)
 
-			}
-		})
+		}
+	})
 
 }
 
 function trataDados(NomeFicheiro, NomeCopybook, copybook, ficheiro) {
 
 	const dados = new dadosEcran(copybook, ficheiro);
+	DadosUsados = dados;
 
 	if (dados.dados.length > 0) {
 
 		const html = formataHTML(NomeFicheiro, NomeCopybook, dados);
 
-		mostraFicheiro(html, NomeFicheiro);
+		mostraFicheiro(NomeFicheiro, html, dados);
 
 	}
 }
 
 /////////////////////////////////////////////////////////////////////
 class dadosEcran {
+
+
 	constructor(CopyBook = new zPic.Copybook, Ficheiro) {
 
 
 		this.Copybook = CopyBook;
 		this.Ficheiro = Ficheiro;
 		this.Cabecalho = [];
+		this.Tipo = [];
+		this.Tamanho = [];
+		this.Decimais = [];
 		this.dados = [];
 		this.lrec = CopyBook.Tamanho;
 		let Inicio = 0;
 		let Fim = 0;
+
 
 		const NumeroRegistosMax = vscode.workspace.getConfiguration().get('zFile.NumberOfRecords');
 		let NumeroRegistos = Ficheiro.length / CopyBook.Tamanho;
@@ -171,6 +207,9 @@ class dadosEcran {
 
 				if (element.Tipo != zPic.ValidaTipoCampo.Grupo) {
 					this.Cabecalho.push(element.Variavel);
+					this.Tamanho.push(element.tamanhoBruto);
+					this.Decimais.push(element.decimais);
+					this.Tipo.push(element.Tipo);
 				}
 			}
 
@@ -212,6 +251,7 @@ class dadosEcran {
 								AlfaArray.push(Ficheiro[K].toString(16));
 							}
 						}
+						console.log('AlfaArray    ' + AlfaArray);
 
 						switch (element.Tipo) {
 							case zPic.ValidaTipoCampo.Alfanumerico:
@@ -256,9 +296,15 @@ class dadosEcran {
 							case zPic.ValidaTipoCampo.Comp3:
 
 								// Trata numericos comp-3
+								let AlfaCarHex2 = ''
 
 								AlfaArray.forEach(CarHex => {
-									Alfa += CarHex;
+									if (CarHex.length == 1) {
+										AlfaCarHex2 = CarHex;
+										Alfa += '0' + AlfaCarHex2;
+									} else {
+										Alfa += CarHex;
+									}
 								})
 
 								console.log('Alfa         ' + Alfa);
@@ -304,6 +350,263 @@ class dadosEcran {
 				}
 				this.dados.push(Reg);
 			}
+		}
+
+		/////////////////////////////////////////////////////////////////////
+		function hextoEBCDIC(hex) {
+
+			// let quadro0 = ['NUL', 'SOH', 'STX', 'ETX', 'SEL', 'HT', 'RNL', 'DEL', 'GE', 'SPS', 'RPT', 'VT', 'FF', 'CR', 'SO', 'SI'];
+			// let quadro1 = ['DLE', 'DC1', 'DC2', 'DC3', 'RES/ENP', 'NL', 'BS', 'POC', 'CAN', 'EM', 'UBS', 'CU1', 'IFS', 'IGS', 'IRS', 'IUS/ITB']
+			// let quadro2 = ['DS', 'SOS', 'FS', 'WUS', 'BYP/INP', 'LF', 'ETB', 'ESC', 'SA', 'SFE', 'SM/SW', 'CSP', 'MFA', 'ENQ', 'ACK', 'BEL']
+			// let quadro3 = ['', '', 'SYN', 'IR', 'PP', 'TRN', 'NBS', 'EOT', 'SBS', 'IT', 'RFF', 'CU3', 'DC4', 'NAK', '', 'SUB']
+			// let quadro4 = ['SP', '', '', '', '', '', '', '', '', '', '¢', '.', '<', '(', '+', '|']
+			// let quadro5 = ['&', '', '', '', '', '', '', '', '', '', '!', '$', '*', ')', ';', '¬']
+			// let quadro6 = ['-', '/', '', '', '', '', '', '', '', '', '¦', ',', '%', '_', '>', '?']
+			// let quadro7 = ['', '', '', '', '', '', '', '', '', '`', ':', '#', '@', "'", '=', '"']
+			// let quadro8 = ['', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '', '', '', '', '', '±']
+			// let quadro9 = ['', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', '', '', '', '', '', '']
+			// let quadro10 = ['', '~', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '', '', '', '', '', '']
+			// let quadro11 = ['^', '', '', '', '', '', '', '', '', '', '[', ']', '', '', '', '']
+			// let quadro12 = ['{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '', '', '', '', '', '']
+			// let quadro13 = ['}', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', '', '', '', '', '', '']
+			// let quadro14 = ['\\', '', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '', '', '', '', '', '']
+			// let quadro15 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '', '', '', '', '', 'EO']
+
+			// let quadro0 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'];
+			// let quadro1 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
+			// let quadro2 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
+			// let quadro3 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
+			// let quadro4 = [' ', '.', '.', '.', '.', '.', '.', '.', '.', '.', '¢', '.', '<', '(', '+', '|']
+			// let quadro5 = ['&', '.', '.', '.', '.', '.', '.', '.', '.', '.', '!', '$', '*', ')', ';', '¬']
+			// let quadro6 = ['-', '/', '.', '.', '.', '.', '.', '.', '.', '.', '¦', ',', '%', '_', '>', '?']
+			// let quadro7 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '`', ':', '#', '@', "'", '=', '"']
+			// let quadro8 = ['.', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '.', '.', '.', '.', '.', '±']
+			// let quadro9 = ['.', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', '.', '.', '.', '.', '.', '.']
+			// let quadro10 = ['.', '~', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '.', '.', '.', '.', '.']
+			// let quadro11 = ['^', '.', '.', '.', '.', '.', '.', '.', '.', '.', '[', ']', '.', '.', '.', '.']
+			// let quadro12 = ['{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '.', '.', '.', '.', '.', '.']
+			// let quadro13 = ['}', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', '.', '.', '.', '.', '.', '.']
+			// let quadro14 = ['\\', '.', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '.', '.', '.', '.', '.', '.']
+			// let quadro15 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '.', '.', '.', '.', '.']
+			// let quadro = [quadro0, quadro1, quadro2, quadro3, quadro4, quadro5, quadro6, quadro7, quadro8,
+			// 	quadro9, quadro10, quadro11, quadro12, quadro13, quadro14, quadro15];
+
+			const x = parseInt(hex.substring(0, 1), 16);
+			const y = parseInt(hex.substring(1, 2), 16);
+
+			return quadro[x][y];
+
+		}
+	}
+
+	/////////////////////////////////////////////////////////////////////
+	//                atualizar a mensagem
+	/////////////////////////////////////////////////////////////////////
+
+	atulizarDados(mensagem) {
+
+		console.log(mensagem);
+
+		const dadosMensagem = JSON.parse(mensagem);
+		const dadosNovos = dadosMensagem.Salvar;
+		const copy = this.Copybook.Copy;
+
+		// for (let i = 0; i < copy.length; i++) {
+		// 	const element = dados.Cabecalho[i];
+		// 	// const vazio = '<td><input value="" ></td>';
+		// 	// LinhaVazia += vazio;
+		// }
+
+		let IndiceCampo = 0;
+		let listaCaracteresTotal = [];
+
+		for (let i = 0; i < dadosNovos.length; i++) {
+
+			while (copy[IndiceCampo].Tipo == zPic.ValidaTipoCampo.Grupo && IndiceCampo < copy.length) {
+				IndiceCampo++
+			}
+
+			const campo = copy[IndiceCampo];
+
+			IndiceCampo++;
+
+			if (IndiceCampo > copy.length) {
+				IndiceCampo = 0
+			}
+
+			let ListaCaracter;
+			let negativo = false;
+			let NumeroSemSinal = '';
+
+			console.log('Campo:  ' + campo.Variavel);
+			console.log('Valor:  ' + dadosNovos[i]);
+
+			switch (campo.Tipo) {
+				case zPic.ValidaTipoCampo.Alfanumerico:
+				case zPic.ValidaTipoCampo.Display:
+				case zPic.ValidaTipoCampo.National:
+				case zPic.ValidaTipoCampo.NumericoFormatado:
+
+					const NumeroEspaços = campo.tamanhoBruto - dadosNovos[i].length;
+					let espaços = '';
+
+					for (let i = 0; i < NumeroEspaços; i++) {
+						espaços += ' ';
+					}
+
+					ListaCaracter = ListarHexadecimais(dadosNovos[i]+ espaços);
+					break;
+
+				case zPic.ValidaTipoCampo.Numerico:
+
+					const numero = RetiraVirgula(dadosNovos[i], campo.tamanhoBruto, campo.decimais);
+					console.log('Numero: ' + numero);
+					ListaCaracter = ListarHexadecimais(numero);
+					break;
+
+				case zPic.ValidaTipoCampo.NumericoSinal:
+
+					if (Number(dadosNovos[i]) < 0) {
+						negativo = true;
+						const Valor = -Number(dadosNovos[i])
+						NumeroSemSinal = String(Valor)
+					} else {
+						NumeroSemSinal = dadosNovos[i]
+					}
+
+					const numeroSinal = RetiraVirgula(NumeroSemSinal, campo.tamanhoBruto, campo.decimais);
+					console.log('Numero: ' + numeroSinal);
+					ListaCaracter = ListarHexadecimais(numeroSinal);
+					if (negativo) {
+						ListaCaracter[ListaCaracter.length-1] = ListaCaracter[ListaCaracter.length-1].replace('f', 'd')
+					} else {
+						ListaCaracter[ListaCaracter.length - 1] = ListaCaracter[ListaCaracter.length - 1].replace('f', 'c')
+					}
+					break;
+
+				case zPic.ValidaTipoCampo.Comp3:
+
+					if (Number(dadosNovos[i]) < 0) {
+						negativo = true;
+						const Valor = -Number(dadosNovos[i])
+						NumeroSemSinal = String(Valor)
+					} else {
+						NumeroSemSinal = dadosNovos[i]
+					}
+
+					let numeroComp3 = RetiraVirgula(NumeroSemSinal, campo.tamanhoBruto, campo.decimais);
+					if (negativo) {
+						numeroComp3 += 'd'
+					} else {
+						numeroComp3 += 'c'
+					}
+					if (numeroComp3.length < campo.Tamanho * 2) {
+						numeroComp3='0'+ numeroComp3
+					}
+					console.log('numero: ' + numeroComp3);
+					ListaCaracter = numeroComp3.match(/.{1,2}/g);
+					break;
+
+				case zPic.ValidaTipoCampo.Binary:
+				case zPic.ValidaTipoCampo.Comp:
+				case zPic.ValidaTipoCampo.Comp2:
+				case zPic.ValidaTipoCampo.Comp4:
+				case zPic.ValidaTipoCampo.Comp5:
+
+					if (Number(dadosNovos[i]) < 0) {
+						negativo = true;
+						const Valor = -Number(dadosNovos[i])
+						NumeroSemSinal = String(Valor)
+					} else {
+						NumeroSemSinal = dadosNovos[i]
+					}
+
+					let numeroComp = RetiraVirgula(NumeroSemSinal, campo.tamanhoBruto, campo.decimais);
+					if (negativo) {
+						numeroComp3 += 'd'
+					} else {
+						numeroComp3 += 'c'
+					}
+
+					console.log('numero: ' + numeroComp);
+					const binario = Number(numeroComp).toString(16)
+					console.log('binario: ' + binario);
+					const diferença = campo.tamanhoBruto - binario.length;
+					let zeros = ''
+
+					for (let i = 0; i < diferença; i++) {
+						zeros += '0';
+					}
+
+					const ListaCaracterTemp = zeros + binario
+
+					ListaCaracter = ListaCaracterTemp.match(/.{1,2}/g);
+
+					break;
+			}
+
+			console.log('Hex:    ' + ListaCaracter);
+			// listaCaracteresTotal = listaCaracteresTotal.concat(ListaCaracter);
+
+			// console.log('listaCaracteresTotal:    ' + listaCaracteresTotal);
+		}
+
+		function RetiraVirgula(numero = '', Tamanho = 0, Decimais = 0) {
+
+			const numeroSepardo = numero.split('.');
+			const TamanhoInteiro = Tamanho - Decimais;
+			const diferençaInteiro = TamanhoInteiro - numeroSepardo[0].length
+			let diferençaDecimais = 0;
+			if (numeroSepardo.length > 1) {
+				diferençaDecimais = Decimais - numeroSepardo[1].length;
+			} else {
+				diferençaDecimais = Decimais;
+			}
+
+			let TextoInteiro = '';
+
+			for (let i = 0; i < diferençaInteiro; i++) {
+				TextoInteiro += '0';
+			}
+
+			TextoInteiro += numeroSepardo[0];
+
+			if (numeroSepardo.length > 1) {
+				TextoInteiro += numeroSepardo[1];
+			}
+			for (let i = 0; i < diferençaDecimais; i++) {
+				TextoInteiro += '0';
+			}
+
+			return TextoInteiro;
+		}
+
+		function ListarHexadecimais(Palavra) {
+
+			let ListaCaracter = []
+			for (let j = 0; j < Palavra.length; j++) {
+				const caracter = Palavra[j];
+				ListaCaracter.push(EBCDICtoHex(caracter));
+			}
+
+			return ListaCaracter;
+		}
+
+		function EBCDICtoHex(Caracter = '') {
+
+			let x = 0;
+			let y = 0;
+
+			for (let i = 0; i < quadro.length; i++) {
+				const linha = quadro[i];
+				for (let j = 0; j < linha.length; j++) {
+					if (linha[j] == Caracter) {
+						x = i;
+						y = j;
+					}
+				}
+			}
+			return x.toString(16) + y.toString(16);
 		}
 	}
 }
@@ -501,51 +804,6 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 }
 
 
-/////////////////////////////////////////////////////////////////////
-function hextoEBCDIC(hex) {
-
-	// let quadro0 = ['NUL', 'SOH', 'STX', 'ETX', 'SEL', 'HT', 'RNL', 'DEL', 'GE', 'SPS', 'RPT', 'VT', 'FF', 'CR', 'SO', 'SI'];
-	// let quadro1 = ['DLE', 'DC1', 'DC2', 'DC3', 'RES/ENP', 'NL', 'BS', 'POC', 'CAN', 'EM', 'UBS', 'CU1', 'IFS', 'IGS', 'IRS', 'IUS/ITB']
-	// let quadro2 = ['DS', 'SOS', 'FS', 'WUS', 'BYP/INP', 'LF', 'ETB', 'ESC', 'SA', 'SFE', 'SM/SW', 'CSP', 'MFA', 'ENQ', 'ACK', 'BEL']
-	// let quadro3 = ['', '', 'SYN', 'IR', 'PP', 'TRN', 'NBS', 'EOT', 'SBS', 'IT', 'RFF', 'CU3', 'DC4', 'NAK', '', 'SUB']
-	// let quadro4 = ['SP', '', '', '', '', '', '', '', '', '', '¢', '.', '<', '(', '+', '|']
-	// let quadro5 = ['&', '', '', '', '', '', '', '', '', '', '!', '$', '*', ')', ';', '¬']
-	// let quadro6 = ['-', '/', '', '', '', '', '', '', '', '', '¦', ',', '%', '_', '>', '?']
-	// let quadro7 = ['', '', '', '', '', '', '', '', '', '`', ':', '#', '@', "'", '=', '"']
-	// let quadro8 = ['', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '', '', '', '', '', '±']
-	// let quadro9 = ['', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', '', '', '', '', '', '']
-	// let quadro10 = ['', '~', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '', '', '', '', '', '']
-	// let quadro11 = ['^', '', '', '', '', '', '', '', '', '', '[', ']', '', '', '', '']
-	// let quadro12 = ['{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '', '', '', '', '', '']
-	// let quadro13 = ['}', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', '', '', '', '', '', '']
-	// let quadro14 = ['\\', '', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '', '', '', '', '', '']
-	// let quadro15 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '', '', '', '', '', 'EO']
-
-	let quadro0 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'];
-	let quadro1 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
-	let quadro2 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
-	let quadro3 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
-	let quadro4 = [' ', '.', '.', '.', '.', '.', '.', '.', '.', '.', '¢', '.', '<', '(', '+', '|']
-	let quadro5 = ['&', '.', '.', '.', '.', '.', '.', '.', '.', '.', '!', '$', '*', ')', ';', '¬']
-	let quadro6 = ['-', '/', '.', '.', '.', '.', '.', '.', '.', '.', '¦', ',', '%', '_', '>', '?']
-	let quadro7 = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '`', ':', '#', '@', "'", '=', '"']
-	let quadro8 = ['.', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '.', '.', '.', '.', '.', '±']
-	let quadro9 = ['.', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', '.', '.', '.', '.', '.', '.']
-	let quadro10 = ['.', '~', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '.', '.', '.', '.', '.']
-	let quadro11 = ['^', '.', '.', '.', '.', '.', '.', '.', '.', '.', '[', ']', '.', '.', '.', '.']
-	let quadro12 = ['{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '.', '.', '.', '.', '.', '.']
-	let quadro13 = ['}', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', '.', '.', '.', '.', '.', '.']
-	let quadro14 = ['\\', '.', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '.', '.', '.', '.', '.', '.']
-	let quadro15 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '.', '.', '.', '.', '.']
-	let quadro = [quadro0, quadro1, quadro2, quadro3, quadro4, quadro5, quadro6, quadro7, quadro8,
-		quadro9, quadro10, quadro11, quadro12, quadro13, quadro14, quadro15];
-
-	const x = parseInt(hex.substring(0, 1), 16);
-	const y = parseInt(hex.substring(1, 2), 16);
-
-	return quadro[x][y];
-
-}
 
 /////////////////////////////////////////////////////////////////////
 function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
@@ -568,8 +826,64 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 		let Linha = '<td class="numeros">' + i + '</td>';
 
 		for (let j = 0; j < dados.dados[i].length; j++) {
-			const element = `<td><input name="tabela" value="` + dados.dados[i][j] + `" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
-			Linha += element;
+
+			let ValorTamanho = dados.Tamanho[j];
+
+			if (dados.Tipo[j] == zPic.ValidaTipoCampo.Alfanumerico ||
+				dados.Tipo[j] == zPic.ValidaTipoCampo.Display ||
+				dados.Tipo[j] == zPic.ValidaTipoCampo.National
+			) {
+				const element = `<td><input class="alfa" name="tabela" value="` + dados.dados[i][j]
+					+ `" maxlength="` + ValorTamanho
+					+ `" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
+				Linha += element;
+			} else {
+
+				const inteirodecimais = 10 ** dados.Decimais[j];
+				const ValorMaximo = (10 ** dados.Tamanho[j] - 1) / inteirodecimais;
+				const ValorDecimais = 1 / inteirodecimais;
+				let ValorMinimo = 0;
+
+				if (ValorDecimais>0) {++ValorTamanho}
+
+
+				if (dados.Tipo[j] == zPic.ValidaTipoCampo.Binary ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp1 ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp2 ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp3 ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp4 ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp5 ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.NumericoSinal ||
+					dados.Tipo[j] == zPic.ValidaTipoCampo.NumericoFormatado
+				) {
+					ValorMinimo = - ValorMaximo;
+					++ValorTamanho;
+				}
+				const element = `<td><input class="number" type="number" name="tabela" value="` + dados.dados[i][j]
+					// + `" maxlength="` + ValorTamanho
+					+ `" max="` + ValorMaximo
+					+ `" min="` + ValorMinimo
+					+ `" step="` + ValorDecimais
+					+ `"let GuardarValor=0;
+					onkeydown="GuardarValor=this.value"
+					onkeyup="
+					if(this.value > ` + ValorMaximo + ` ||
+					this.value < ` + ValorMinimo + `
+					) {
+					    this.value=GuardarValor;
+					}
+                    if (Number(this.value)>Math.trunc(Number(this.value) * ` + inteirodecimais + `)/` + inteirodecimais + `){
+					    this.value=Math.trunc(Number(this.value) * ` + inteirodecimais + `)/` + inteirodecimais + `;
+					}
+					 ;`
+					// + `" oninput="javascript: if (event > ` + ValorMaximo + `) event = event.slice(0, (`+ValorMaximo+`).Length);`
+					// + `onkeydown="javascript: return event.keyCode === 8 || event.keyCode === 46 ? true : !isNaN(Number(event.key))"`
+					+ `" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
+
+				Linha += element;
+
+			}
 		}
 
 		const LinhaHTML = '<tr>' + Linha + '</tr>';
@@ -588,7 +902,15 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
         <style>
 
-            #cabecalho {
+		    .alfa {
+                text-align: left;
+			}
+
+		    .number {
+                text-align: right;
+			}
+
+			#cabecalho {
                 display: block;
 				margin-left:50px;
             }
@@ -714,16 +1036,16 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 }
 
 /////////////////////////////////////////////////////////////////////
-function mostraFicheiro(html, Ficheiro) {
+function mostraFicheiro(NomeFicheiro, html, dados = new dadosEcran) {
 
 	let painel;
-	painel = vscode.window.createWebviewPanel('zFile', Ficheiro, 1);
+	painel = vscode.window.createWebviewPanel('zFile', NomeFicheiro, 1);
 	painel.webview.options = {
 		enableScripts: true,
 	};
 	painel.webview.html = html;
 	painel.webview.onDidReceiveMessage(mensagem => {
-		console.log(mensagem);
+		dados.atulizarDados(mensagem);
 	})
 }
 
