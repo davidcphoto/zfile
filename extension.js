@@ -8,6 +8,7 @@ const zos_files = require("@zowe/zos-files-for-zowe-sdk");
 const zPic = require("./zPicClass.js");
 const ebcdic_parser = require("ebcdic-parser");
 const { error } = require('console');
+const { streamToBuffer } = require('@vscode/test-electron/out/util.js');
 
 
 const quadro = [
@@ -113,12 +114,41 @@ function lerFicheiroTxt(Ficheiro) {
 /////////////////////////////////////////////////////////////////////
 async function abrirFicheiroBin(sessao, Ficheiro) {
 
-	const FicheiroBinario = await zos_files.Get.dataSet(sessao, Ficheiro, { "binary": true })
+	const FicheiroBinario = await zos_files.Get.dataSet(sessao, Ficheiro, { "binary": true }).catch(e => {
+		vscode.window.showErrorMessage(e.mDetails.msg)
+		console.log(e)
+	})
 	console.log('binario ' + FicheiroBinario)
 
 	return FicheiroBinario;
 }
+/////////////////////////////////////////////////////////////////////
 
+function enviaParaCentral(sessao, lista, Ficheiro = '') {
+
+	let listaBin = [];
+	for (let i = 0; i < lista.length; i++) {
+		listaBin.push(parseInt(lista[i],16));
+		console.log(listaBin);
+	}
+	const ListaBuffer = Buffer.from(listaBin);
+
+	zos_files.Upload.bufferToDataSet(sessao, ListaBuffer, Ficheiro, {'binary':true}).then(ficheiro => {
+		if (ficheiro.success) {
+			vscode.window.showInformationMessage('File ' + Ficheiro + ' saved to mainframe')
+		} else {
+			vscode.window.showErrorMessage('Error saving file ' + Ficheiro + '.')
+		}
+	}).catch(e => {
+		vscode.window.showErrorMessage('Error saving file ' + Ficheiro + '.')
+		console.log(e);
+	});
+}
+
+/////////////////////////////////////////////////////////////////////
+function hex2bin(hex) {
+	return (parseInt(hex, 16).toString(2)).padStart(8, '0');
+}
 /////////////////////////////////////////////////////////////////////
 async function abrirFicheiroTXT(sessao, Ficheiro) {
 
@@ -138,7 +168,7 @@ function trataFicheiro(sessao, Ficheiro, Copybook, central = new Boolean) {
 
 			trataCopybook(sessao, Copybook).then(copybook => {
 
-				trataDados(Ficheiro, Copybook, copybook, ficheiro)
+				trataDados(Ficheiro, Copybook, copybook, ficheiro, sessao)
 
 			}).catch(err => {
 				vscode.window.showErrorMessage(err)
@@ -149,14 +179,14 @@ function trataFicheiro(sessao, Ficheiro, Copybook, central = new Boolean) {
 			const copybook = lerFicheiroTxt(Copybook);
 
 			const Copy = new zPic.Copybook(copybook);
-			trataDados(Ficheiro, Copybook, Copy, ficheiro)
+			trataDados(Ficheiro, Copybook, Copy, ficheiro, sessao)
 
 		}
 	})
 
 }
 
-function trataDados(NomeFicheiro, NomeCopybook, copybook, ficheiro) {
+function trataDados(NomeFicheiro, NomeCopybook, copybook, ficheiro, sessao) {
 
 	const dados = new dadosEcran(copybook, ficheiro);
 	DadosUsados = dados;
@@ -165,7 +195,7 @@ function trataDados(NomeFicheiro, NomeCopybook, copybook, ficheiro) {
 
 		const html = formataHTML(NomeFicheiro, NomeCopybook, dados);
 
-		mostraFicheiro(NomeFicheiro, html, dados);
+		mostraFicheiro(sessao, NomeFicheiro, html, dados);
 
 	}
 }
@@ -422,17 +452,21 @@ class dadosEcran {
 
 		for (let i = 0; i < dadosNovos.length; i++) {
 
-			while (copy[IndiceCampo].Tipo == zPic.ValidaTipoCampo.Grupo && IndiceCampo < copy.length) {
+			while (IndiceCampo < copy.length && copy[IndiceCampo].Tipo == zPic.ValidaTipoCampo.Grupo) {
 				IndiceCampo++
 			}
 
+			if (IndiceCampo >= copy.length) {
+				IndiceCampo = 0
+
+				while (IndiceCampo < copy.length && copy[IndiceCampo].Tipo == zPic.ValidaTipoCampo.Grupo) {
+					IndiceCampo++
+				}
+			}
 			const campo = copy[IndiceCampo];
 
 			IndiceCampo++;
 
-			if (IndiceCampo > copy.length) {
-				IndiceCampo = 0
-			}
 
 			let ListaCaracter;
 			let negativo = false;
@@ -454,7 +488,7 @@ class dadosEcran {
 						espaços += ' ';
 					}
 
-					ListaCaracter = ListarHexadecimais(dadosNovos[i]+ espaços);
+					ListaCaracter = ListarHexadecimais(dadosNovos[i] + espaços);
 					break;
 
 				case zPic.ValidaTipoCampo.Numerico:
@@ -478,7 +512,7 @@ class dadosEcran {
 					console.log('Numero: ' + numeroSinal);
 					ListaCaracter = ListarHexadecimais(numeroSinal);
 					if (negativo) {
-						ListaCaracter[ListaCaracter.length-1] = ListaCaracter[ListaCaracter.length-1].replace('f', 'd')
+						ListaCaracter[ListaCaracter.length - 1] = ListaCaracter[ListaCaracter.length - 1].replace('f', 'd')
 					} else {
 						ListaCaracter[ListaCaracter.length - 1] = ListaCaracter[ListaCaracter.length - 1].replace('f', 'c')
 					}
@@ -501,7 +535,7 @@ class dadosEcran {
 						numeroComp3 += 'c'
 					}
 					if (numeroComp3.length < campo.Tamanho * 2) {
-						numeroComp3='0'+ numeroComp3
+						numeroComp3 = '0' + numeroComp3
 					}
 					console.log('numero: ' + numeroComp3);
 					ListaCaracter = numeroComp3.match(/.{1,2}/g);
@@ -522,16 +556,16 @@ class dadosEcran {
 					}
 
 					let numeroComp = RetiraVirgula(NumeroSemSinal, campo.tamanhoBruto, campo.decimais);
-					if (negativo) {
-						numeroComp3 += 'd'
-					} else {
-						numeroComp3 += 'c'
-					}
+					// if (negativo) {
+					// 	numeroComp3 += 'd'
+					// } else {
+					// 	numeroComp3 += 'c'
+					// }
 
 					console.log('numero: ' + numeroComp);
 					const binario = Number(numeroComp).toString(16)
 					console.log('binario: ' + binario);
-					const diferença = campo.tamanhoBruto - binario.length;
+					const diferença = (campo.Tamanho * 2) - binario.length;
 					let zeros = ''
 
 					for (let i = 0; i < diferença; i++) {
@@ -546,10 +580,12 @@ class dadosEcran {
 			}
 
 			console.log('Hex:    ' + ListaCaracter);
-			// listaCaracteresTotal = listaCaracteresTotal.concat(ListaCaracter);
-
-			// console.log('listaCaracteresTotal:    ' + listaCaracteresTotal);
+			if (ListaCaracter.length > 0) {
+				listaCaracteresTotal = listaCaracteresTotal.concat(ListaCaracter);
+			}
+			console.log('listaCaracteresTotal:    ' + listaCaracteresTotal);
 		}
+		return listaCaracteresTotal;
 
 		function RetiraVirgula(numero = '', Tamanho = 0, Decimais = 0) {
 
@@ -811,11 +847,12 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 	let Cabecalho = '<th>#</th>';
 	// const Save = '$(save)';
 
-	// let LinhaVazia = '<td class="numeros"></td>';
+	let LinhaVazia = '<td class="numeros">teste</td>';
 	for (let i = 0; i < dados.Cabecalho.length; i++) {
 		const element = '<th>' + dados.Cabecalho[i] + '</th>';
 		Cabecalho += element;
-		// const vazio = '<td><input value="" ></td>';
+		// const vazio = `<td><input class="alfa" name="tabela" value="" maxlength="`
+		// 	+ `" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
 		// LinhaVazia += vazio;
 	}
 
@@ -844,7 +881,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				const ValorDecimais = 1 / inteirodecimais;
 				let ValorMinimo = 0;
 
-				if (ValorDecimais>0) {++ValorTamanho}
+				if (ValorDecimais > 0) { ++ValorTamanho }
 
 
 				if (dados.Tipo[j] == zPic.ValidaTipoCampo.Binary ||
@@ -861,7 +898,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					++ValorTamanho;
 				}
 				const element = `<td><input class="number" type="number" name="tabela" value="` + dados.dados[i][j]
-					// + `" maxlength="` + ValorTamanho
 					+ `" max="` + ValorMaximo
 					+ `" min="` + ValorMinimo
 					+ `" step="` + ValorDecimais
@@ -877,8 +913,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					    this.value=Math.trunc(Number(this.value) * ` + inteirodecimais + `)/` + inteirodecimais + `;
 					}
 					 ;`
-					// + `" oninput="javascript: if (event > ` + ValorMaximo + `) event = event.slice(0, (`+ValorMaximo+`).Length);`
-					// + `onkeydown="javascript: return event.keyCode === 8 || event.keyCode === 46 ? true : !isNaN(Number(event.key))"`
 					+ `" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
 
 				Linha += element;
@@ -902,10 +936,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
         <style>
 
-		    .alfa {
-                text-align: left;
-			}
-
 		    .number {
                 text-align: right;
 			}
@@ -917,7 +947,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 			h3 {
                 text-align: left;
-				margin-left=30px;
+				margin-left: 30px;
 			}
 
 			.botoes {
@@ -967,11 +997,11 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 background-color: var(--vscode-list-activeSelectionBackground);
             }
 
-            input {
+            td, input {
                 background-color: var(--vscode-list-hoverBackground);
 				color: var(--vscode-list-activeSelectionForeground);
                 text-align: center;
-                padding: 8px;
+                padding: 3px;
 				border:none;
             }
 
@@ -979,7 +1009,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 background-color: var(--vscode-list-activeSelectionBackground);
             }
 
-            tr, #numeros {
+            .numeros {
                 background-color: var(--vscode-button-secondaryHoverBackground);
             }
 
@@ -988,16 +1018,28 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	        const vscode = acquireVsCodeApi();
 
-			function getDados() {
-                const tabela = document.getElementsByName("tabela");
-                let retorno = [];
-                for (let i = 0; i < tabela.length; i++) {
-                  retorno.push(tabela[i].value);
-                }
-				const msgRetorno = '{"Salvar":' + JSON.stringify(retorno) + '}';
-				console.log(msgRetorno);
-	            vscode.postMessage(msgRetorno);
+			function getDados(escolha) {
+
+			    switch(escolha) {
+				    case "Saltar":
+
+                         const tabela = document.getElementsByName("tabela");
+                         let retorno = [];
+                         for (let i = 0; i < tabela.length; i++) {
+                           retorno.push(tabela[i].value);
+                         }
+				         const msgRetorno = '{"Salvar":' + JSON.stringify(retorno) + '}';
+				         console.log(msgRetorno);
+	                     vscode.postMessage(msgRetorno);
+						 break;
+
+						 case "NovaLinha":
+			             const tabelaTotal = document.getElementById("tabelaTotal");
+				         tabelaTotal.innerHTML+='${LinhaVazia}';
+				         break;
+				}
 			}
+
 		</script>
 </head>
 
@@ -1006,11 +1048,12 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
         <div id="cabecalho">
             <div>
                 <h1>zFile - ${Ficheiro}</h1>
-				<a href="#" onclick="getDados()">teste</a>
+				<a href="#" onclick="getDados('Salvar')">salvar</a>
+	    		<a href="#" onclick="getDados('NovaLinha')">linha</a>
 	        </div>
 		</div>
         <div id="corpo">
-            <table>
+            <table id="tabelaTotal">
                 <tr>
 	    		    ${Cabecalho}
                 </tr>
@@ -1028,15 +1071,10 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	return HTML;
 
-	// function teste() {
-
-	// }
-
-
 }
 
 /////////////////////////////////////////////////////////////////////
-function mostraFicheiro(NomeFicheiro, html, dados = new dadosEcran) {
+function mostraFicheiro(sessao, NomeFicheiro, html, dados = new dadosEcran) {
 
 	let painel;
 	painel = vscode.window.createWebviewPanel('zFile', NomeFicheiro, 1);
@@ -1045,7 +1083,8 @@ function mostraFicheiro(NomeFicheiro, html, dados = new dadosEcran) {
 	};
 	painel.webview.html = html;
 	painel.webview.onDidReceiveMessage(mensagem => {
-		dados.atulizarDados(mensagem);
+		const lista = dados.atulizarDados(mensagem);
+		enviaParaCentral(sessao, lista, NomeFicheiro);
 	})
 }
 
