@@ -36,12 +36,15 @@
       },
       {
         "command": "zfile.Save",
-        "title": "zFile - Save",
-        "enablement": "false"
+        "title": "zFile - Save"
       },
       {
-        "command": "zfile.Edit",
-        "title": "zFile - Edit"
+        "command": "zfile.AddLineAfter",
+        "title": "zFile - Add Line After"
+      },
+      {
+        "command": "zfile.RemoveLine",
+        "title": "zFile - Remove Line"
       },
       {
         "command": "zfile.Export",
@@ -63,14 +66,19 @@
           "group": "911_zfile@1"
         },
         {
-          "command": "zfile.Edit",
+          "command": "zfile.Export",
           "when": "webviewId == zFile",
           "group": "911_zfile@2"
         },
         {
-          "command": "zfile.Export",
+          "command": "zfile.AddLineAfter",
           "when": "webviewId == zFile",
-          "group": "911_zfile@3"
+          "group": "912_zfile@2"
+        },
+        {
+          "command": "zfile.RemoveLine",
+          "when": "webviewId == zFile",
+          "group": "912_zfile@2"
         }
       ]
     },
