@@ -844,7 +844,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			dados.Tipo[i] == zPic.ValidaTipoCampo.Display ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.National
 		) {
-			const vazio = `<td><input oncontextmenu="SelectLinha(this);" class="alfa" name="tabela" maxlength="${dados.Tamanho[i]}" data-vscode-context=\"{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}\"></td>`;
+			const vazio = `<td><input oncontextmenu="SelectLinha(this);" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}" data-vscode-context=\"{"webviewSection": "editor", "preventDefaultContextMenuItems": false}\"></td>`;
 			LinhaVazia += vazio;
 		} else {
 
@@ -882,7 +882,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	for (let i = 0; i < dados.dados.length; i++) {
 
-		let Linha = '<td class="numeros">' + i + '</td>';
+		let Linha = `<td class="numeros">${NLinha}</td>`;
 
 		for (let j = 0; j < dados.dados[i].length; j++) {
 
@@ -894,7 +894,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			) {
 				const element = `<td><input oncontextmenu="SelectLinha(this);" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
 					+ `" maxlength="` + ValorTamanho
-					+ `" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
+					+ `" data-vscode-context='{"webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
 				Linha += element;
 			} else {
 
@@ -932,7 +932,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					}
                     if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){
 					    this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};
-					};" data-vscode-context='{ "webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
+					};" data-vscode-context='{"webviewSection": "editor", "preventDefaultContextMenuItems": false}'></td>`;
 
 				Linha += element;
 
@@ -1042,6 +1042,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 		<script>
 
             let LinhaClicada="";
+			let NumeroLinhas = ${NLinha};
 	        const vscode = acquireVsCodeApi();
 
 			function getDados() {
@@ -1058,17 +1059,50 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
             function SelectLinha(Linha) {
 			    console.log('SelectLinha');
-			        console.log('teste ' + Linha.parentNode.parentNode.nodeName);
+			        console.log('teste ' + Linha.parentNode.parentNode.getAttribute("id"));
 					LinhaClicada=Linha.parentNode.parentNode.getAttribute("id");
 			}
 
-			function NovaLinha() {
+			function NovaLinhaFim() {
+			    console.log('NovaLinhaFim');
 			    const tabelaTotal = document.getElementById("tabelaTotal");
-				const NumeroLinhas = document.getElementsByName("Linha").length + 1;
+				console.log('NumeroLinhas ' + NumeroLinhas);
 
 				const LinhaVazia = '${LinhaVazia}';
-				const LinhaAtualizada = LinhaVazia.replace("NumeroSubstituir", NumeroLinhas.toString());
-				tabelaTotal.innerHTML+='<tr name="Linha">' + LinhaAtualizada + '</tr>';
+				const LinhaAtualizada = LinhaVazia.split("NumeroSubstituir").join(NumeroLinhas.toString());
+				tabelaTotal.innerHTML+='<tr name="Linha" id="Linha' + NumeroLinhas + '">' + LinhaAtualizada + '</tr>';
+				NumeroLinhas += 1;
+			}
+
+			function NovaLinhaInicio() {
+			    const LinhasAntes = document.getElementsByName("tabela").length;
+				console.log(LinhasAntes);
+			    NovaLinhaFim();
+			    const LinhasDepois = document.getElementsByName("tabela").length;
+				console.log(LinhasDepois);
+				const diferença = LinhasDepois-LinhasAntes;
+
+				let j=LinhasAntes-1;
+
+				for (let i = LinhasDepois-1; i > diferença-1; i--) {
+				    console.log('trata ' + i + ' - ' + j);
+				    console.log('Move ' + document.getElementsByName("tabela")[j].value);
+					// document.getElementsByName("tabela")[i].setAttribute("value", document.getElementsByName("tabela")[j].getAttribute("value"));
+					document.getElementsByName("tabela")[i].value = document.getElementsByName("tabela")[j].value;
+					--j;
+
+				}
+
+				for (let i = diferença; i > 0; i--) {
+				    console.log('trata ' + i);
+					if (document.getElementsByName("tabela")[i-1].type=="number"){
+					    document.getElementsByName("tabela")[i-1].setAttribute("value", "0");
+					} else {
+					    document.getElementsByName("tabela")[i-1].setAttribute("value", "");
+					 }
+
+				}
+
 			}
 
 			function Exportar() {
@@ -1102,8 +1136,11 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                     case 'Exportar':
                         Exportar();
                         break;
-					case 'NovaLinha':
-						NovaLinha();
+					case 'NovaLinhaFim':
+						NovaLinhaFim();
+						break;
+					case 'NovaLinhaInicio':
+						NovaLinhaInicio();
 						break;
 					case 'EliminarLinha':
 						EliminarLinha();
@@ -1148,17 +1185,22 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 function mostraFicheiro(sessao, NomeFicheiro, html, dados = new dadosEcran) {
 
 	let painel;
-	painel = vscode.window.createWebviewPanel('zFile', NomeFicheiro, 1);
-	painel.webview.options = {
+	painel = vscode.window.createWebviewPanel('zFile', NomeFicheiro, 1,{
 		enableScripts: true,
-	};
+		retainContextWhenHidden:true
+	});
+	painel.onDidChangeViewState(() => {
+		console.log('onDidChangeViewState');
+	});
+	painel.onDidDispose(() => {
+		console.log('onDidDispose');
+	});
 	painel.webview.html = html;
 	painel.webview.onDidReceiveMessage(mensagem => {
 
 		const dadosMensagem = JSON.parse(mensagem);
 		const Salvar = dadosMensagem.Salvar;
 		const Exportar = dadosMensagem.Exportar;
-		const EliminarLinha = dadosMensagem.EliminarLinha;
 
 		switch (true) {
 			case Salvar !=undefined :
@@ -1173,9 +1215,6 @@ function mostraFicheiro(sessao, NomeFicheiro, html, dados = new dadosEcran) {
 					vscode.workspace.fs.writeFile(result, new TextEncoder().encode(CSV));
 					});
 				break;
-			case EliminarLinha != undefined:
-				console.log(EliminarLinha);
-				break
 
 		}
 	})
@@ -1224,11 +1263,37 @@ function mostraFicheiro(sessao, NomeFicheiro, html, dados = new dadosEcran) {
 	let disposableAddLineAfter = vscode.commands.registerCommand('zfile.AddLineAfter', function () {
 
 		if (painel) {
-			painel.webview.postMessage({ command: 'NovaLinha' });
+			painel.webview.postMessage({ command: 'NovaLinhaDepois' });
 		}
 
 	});
 
+	/////////////////////////////////////////////////////////////////////
+	let disposableAddLineBefore = vscode.commands.registerCommand('zfile.AddLineBefore', function () {
+
+		if (painel) {
+			painel.webview.postMessage({ command: 'NovaLinhaAntes' });
+		}
+
+	});
+
+	/////////////////////////////////////////////////////////////////////
+	let disposableAddLineBeginning = vscode.commands.registerCommand('zfile.AddLineBeginning', function () {
+
+		if (painel) {
+			painel.webview.postMessage({ command: 'NovaLinhaInicio' });
+		}
+
+	});
+
+	/////////////////////////////////////////////////////////////////////
+	let disposableAddLineEnd = vscode.commands.registerCommand('zfile.AddLineEnd', function () {
+
+		if (painel) {
+			painel.webview.postMessage({ command: 'NovaLinhaFim' });
+		}
+
+	});
 	/////////////////////////////////////////////////////////////////////
 	let disposableRemoveLine = vscode.commands.registerCommand('zfile.RemoveLine', function () {
 		vscode.window.showInformationMessage("EliminarLinha");
@@ -1239,6 +1304,9 @@ function mostraFicheiro(sessao, NomeFicheiro, html, dados = new dadosEcran) {
 
 	this.context.subscriptions.push(disposableSave);
 	this.context.subscriptions.push(disposableAddLineAfter);
+	this.context.subscriptions.push(disposableAddLineBefore);
+	this.context.subscriptions.push(disposableAddLineBeginning);
+	this.context.subscriptions.push(disposableAddLineEnd);
 	this.context.subscriptions.push(disposableRemoveLine);
 	this.context.subscriptions.push(disposableExport);
 
