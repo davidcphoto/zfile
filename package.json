@@ -36,19 +36,31 @@
       },
       {
         "command": "zfile.Save",
-        "title": "zFile - Save"
+        "title": "Save"
       },
       {
         "command": "zfile.AddLineAfter",
-        "title": "zFile - Add Line After"
+        "title": "Add Line After"
+      },
+      {
+        "command": "zfile.AddLineBefore",
+        "title": "Add Line Before"
+      },
+      {
+        "command": "zfile.AddLineBeginning",
+        "title": "Add Line to the beginning"
+      },
+      {
+        "command": "zfile.AddLineEnd",
+        "title": "Add Line to the end"
       },
       {
         "command": "zfile.RemoveLine",
-        "title": "zFile - Remove Line"
+        "title": "Remove Line"
       },
       {
         "command": "zfile.Export",
-        "title": "zFile - Export"
+        "title": "Export to CSV"
       }
     ],
     "menus": {
@@ -71,14 +83,29 @@
           "group": "911_zfile@2"
         },
         {
-          "command": "zfile.AddLineAfter",
+          "command": "zfile.AddLineBeginning",
+          "when": "webviewId == zFile",
+          "group": "912_zfile@1"
+        },
+        {
+          "command": "zfile.AddLineEnd",
           "when": "webviewId == zFile",
           "group": "912_zfile@2"
         },
         {
+          "command": "zfile.AddLineAfter",
+          "when": "webviewId == zFile",
+          "group": "912_zfile@3"
+        },
+        {
+        "command": "zfile.AddLineBefore",
+        "when": "webviewId == zFile",
+        "group": "912_zfile@4"
+      },
+        {
           "command": "zfile.RemoveLine",
           "when": "webviewId == zFile",
-          "group": "912_zfile@2"
+          "group": "912_zfile@5"
         }
       ]
     },
