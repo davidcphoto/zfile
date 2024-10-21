@@ -1065,12 +1065,19 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 			function NovaLinhaFim() {
 			    console.log('NovaLinhaFim');
-			    const tabelaTotal = document.getElementById("tabelaTotal");
+
+				for (let i = 0; i < document.getElementsByName('tabela').length; i++) {
+					document.getElementsByName('tabela')[i].setAttribute('value',document.getElementsByName('tabela')[i].value);
+				}
+			    console.log('1 celula ' + document.getElementsByName('tabela')[0].getAttribute('value'));
+
+			    // const tabelaTotal = document.getElementById("tabelaTotal");
+			    const tabelaTotal = document.getElementsByTagName("tbody");
 				console.log('NumeroLinhas ' + NumeroLinhas);
 
 				const LinhaVazia = '${LinhaVazia}';
 				const LinhaAtualizada = LinhaVazia.split("NumeroSubstituir").join(NumeroLinhas.toString());
-				tabelaTotal.innerHTML+='<tr name="Linha" id="Linha' + NumeroLinhas + '">' + LinhaAtualizada + '</tr>';
+				tabelaTotal[0].innerHTML+='<tr name="Linha" id="Linha' + NumeroLinhas + '">' + LinhaAtualizada + '</tr>';
 				NumeroLinhas += 1;
 			}
 
