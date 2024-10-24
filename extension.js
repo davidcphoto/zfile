@@ -577,11 +577,12 @@ class dadosEcran {
 							// e passa 1 para o digito seguinte
 							if (sinalPorTratar) {
 								if (b != 'f') {
-									b = (parseInt(b) + 1).toString();
+									b = (parseInt(b, 16) + 1).toString(16);
+									sinalPorTratar = false;
 								} else {
 									b = '0';
 									if (a != 'f') {
-										a = (parseInt(a) + 1).toString();
+										a = (parseInt(a,16) + 1).toString(16);
 										sinalPorTratar = false;
 									} else {
 										a = '0';
@@ -1317,16 +1318,16 @@ function mostraFicheiro(sessao, NomeFicheiro, html, dados = new dadosEcran) {
 		enableScripts: true,
 		retainContextWhenHidden: true,
 		enableFindWidget: true,
+		enableCommandUris: true,
 
 	});
 
-	painel.onDidChangeViewState((state) => {
-		console.log('onDidChangeViewState ' + state.webviewPanel.title);
-		painel = state.webviewPanel;
-	});
+	// painel.onDidChangeViewState((state) => {
+	// 	console.log('onDidChangeViewState ' + state.webviewPanel.title);
+	// 	painel = state.webviewPanel;
+	// });
 	painel.onDidDispose(() => {
-		console.log('onDidDispose');
-		painel = null;
+		painel.dispose();
 	});
 	painel.webview.html = html;
 	painel.webview.onDidReceiveMessage(mensagem => {
