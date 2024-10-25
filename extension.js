@@ -431,7 +431,7 @@ class dadosEcran {
 
 		// for (let i = 0; i < copy.length; i++) {
 		// 	const element = dados.Cabecalho[i];
-		// 	// const vazio = '<td><input value="" ></td>';
+		// 	// const vazio = '<td><input SelectLinha() value="" ></td>';
 		// 	// LinhaVazia += vazio;
 		// }
 
@@ -877,7 +877,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			dados.Tipo[i] == zPic.ValidaTipoCampo.Display ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.National
 		) {
-			const vazio = `<td><input oncontextmenu="SelectLinha(NumeroSubstituir, 0, 0);" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
+			const vazio = `<td><input onclick="SelectLinha(NumeroSubstituir)" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
 			LinhaVazia += vazio;
 		} else {
 
@@ -904,7 +904,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 				ValorMinimo = - ValorMaximo;
 
-				const element = `<td><input oncontextmenu="SelectLinha(NumeroSubstituir, 0, 0);" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
+				const element = `<td><input onclick="SelectLinha(NumeroSubstituir)" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
 				LinhaVazia += element;
 			}
 
@@ -925,7 +925,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				dados.Tipo[j] == zPic.ValidaTipoCampo.Display ||
 				dados.Tipo[j] == zPic.ValidaTipoCampo.National
 			) {
-				const element = `<td><input oncontextmenu="SelectLinha(${NLinha}, 0, 0)" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
+				const element = `<td><input onclick="SelectLinha(${NLinha})" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
 					+ `" maxlength="` + ValorTamanho
 					+ `"></td>`;
 				Linha += element;
@@ -953,7 +953,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					ValorMinimo = - ValorMaximo;
 					++ValorTamanho;
 				}
-				const element = `<td><input oncontextmenu="SelectLinha(${NLinha}, 0, 0)" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
+				const element = `<td><input onclick="SelectLinha(${NLinha})" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
 				max="${ValorMaximo}"
 				min="${ValorMinimo}"
 				step="${ValorDecimais}"
@@ -990,12 +990,22 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
         <style>
 
+		    body {
+			    padding: 0;
+			}
             .menu {
 			    display:none;
-			    background-color: var(--vscode-editor-inactiveSelectionBackground);
-                box-shadow: 0px 8px 16px 0px rgba(1, 0, 0, 0.5);
-                padding: 5px;
+			    background-color: var(--vscode-list-hoverBackground);
+                box-shadow: 0px 8px 16px 0px rgba(255, 255, 255, 0.3);
+			    padding: 5px;
 				position: fixed;
+			    top: 4em;
+				z-index: 110;
+				left: 0.5em;
+			}
+
+			.selecionado {
+            	box-shadow: 0px 0px 0px 5px var(--vscode-list-activeSelectionBackground);
 			}
 
             .menuitem {
@@ -1006,13 +1016,14 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 			.menuSeparador {
 			    display:block;
-                border-top: 3px solid #bbb;
+                border-top: 1px solid #bbb;
                 border-radius: 1px;
 				margin: 3px;
 			}
             .menuitem a, .menuitem a:active, .menuitem a:hover {
 			    display:block;
-		        color: var(--vscode-list-activeSelectionForeground);
+		        cursor: pointer;
+                color: var(--vscode-list-activeSelectionForeground);
                 text-decoration: none;
 			}
             .menuitem:hover {
@@ -1027,13 +1038,25 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			}
 
 			#cabecalho {
-                display: block;
-				margin-left:50px;
+                display: flex;
+				position: fixed;
+			    background-color: var(--vscode-textBlockQuote-background);
+				width: 100%;
+				z-index: 100;
+				left: 0;
             }
 
-			h3 {
-                text-align: left;
-				margin-left: 30px;
+			#colunamenu, #colunanome, #colunadados{
+			    position: relative;
+				display: block;
+				padding: 8px;
+				min-width: 50px;
+				height: 5em;
+			}
+
+			#espaco {
+				height: 6em;
+				display: block;
 			}
 
 			.botoes {
@@ -1078,11 +1101,40 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             tr:hover, input:hover {
                 background-color: var(--vscode-list-activeSelectionBackground);
 				border-color: var(--vscode-list-activeSelectionBackground);
+            	box-shadow: 0px 0px 0px 5px var(--vscode-editor-inactiveSelectionBackground);
             }
 
             .numeros {
                 background-color: var(--vscode-button-secondaryHoverBackground);
             }
+
+			.button {
+
+                background-color: var(--vscode-list-hoverBackground);
+                transition: 0.3s transform ease-in-out, 0.3s opacity ease-in-out;
+                cursor: pointer;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                width: 2em;
+                height: 2em;
+	            opacity: 1;
+	            padding: 10px;
+	            position: fixed;
+	            top: 1.5em;
+				z-index:100;
+
+			    span{
+                    width: 100vw;
+                    height: 4px;
+                    background-color: var(--vscode-list-activeSelectionForeground);
+                    border-radius: 20%;
+                }
+            }
+
+            .button:hover {
+	    		box-shadow: 0px 8px 16px 0px rgba(255, 255, 255, 0.3);
+			}
 
         </style>
 		<script>
@@ -1090,6 +1142,15 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             let LinhaClicada=0;
 			let NumeroLinhas = ${NLinha};
 	        const vscode = acquireVsCodeApi();
+
+			function clicarmenu() {
+				if (document.getElementById('menu').style.display != "block"){
+				    document.getElementById('menu').style.display = "block"
+				} else {
+				    document.getElementById('menu').style.display = "none"
+				};
+
+			}
 
 			function getDados(ficheiro) {
 
@@ -1112,15 +1173,20 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				document.getElementById('menu').style.display = "none";
 			}
 
-            function SelectLinha(Linha, x, y) {
+            function SelectLinha(Linha) {
 			    if (Linha){
 			        console.log('SelectLinha ' + Linha);
 				    LinhaClicada = Linha;
-				    document.getElementById('menu').style.display = "inline-block";
-				} else {
-				 esconde()
-				}
+
+				    for (let i = 0; i < document.getElementsByName('Linha').length; i++) {
+				    	document.getElementsByName('Linha')[i].classList.remove("selecionado");
+				    }
+
+					document.getElementById('Linha' + Linha).classList.add("selecionado");
+			    	esconde();
+			    }
 			}
+
 
 			function NovaLinhaFim() {
 			    console.log('NovaLinhaFim');
@@ -1151,6 +1217,8 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				LinhaInicial=diferença;
 				deslocaElementos(LinhaInicial, LinhasAntes, LinhasDepois);
 				esconde();
+				++LinhaClicada;
+				SelectLinha(LinhaClicada);
 
 			}
 
@@ -1204,6 +1272,8 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				const LinhaInicial = LinhaClicada * diferença;
 				deslocaElementos(LinhaInicial, LinhasAntes, LinhasDepois);
 				esconde();
+				++LinhaClicada;
+				SelectLinha(LinhaClicada);
 
 			}
 
@@ -1259,9 +1329,9 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 }
             });
 
-			window.addEventListener("click", (event) => {
-                esconde();
-            });
+			// window.addEventListener("click", (event) => {
+            //     esconde();
+            // });
 
 
 			// window.addEventListener("contextmenu", (event) => {
@@ -1275,9 +1345,22 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 <body id="zFile${nFicheiro}" data-vscode-context='{"Ficheiro": "zFile${nFicheiro}", "preventDefaultContextmenuitems": true}'>
     <div id="total">
         <div id="cabecalho">
-            <div>
-                <h2>zFile - ${Ficheiro}</h2>
+		    <div id="colunamenu">
+		        <div class="button" onclick="clicarmenu()">
+	            	<span> </span>
+	            	<span> </span>
+	            	<span> </span>
+	            </div>
 	        </div>
+			<div id="colunanome">
+			    <h1>Zpic</h1>
+			</div>
+            <div id=colunadados>
+                <p>File: ${Ficheiro}</p>
+                <p>Copybook: ${Copybook}</p>
+	        </div>
+		</div>
+		<div id="espaco">
 		</div>
         <div id="corpo">
             <table id="tabelaTotal">
@@ -1287,20 +1370,20 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 ${Corpo}
             </table>
         </div>
-		<div>
-            <h3>Copybook: ${Copybook}</h3>
-		</div>
     </div>
-	<ul id="menu" class="menu">
-        <li class="menuitem"><a onclick="getDados()">Save</a></li>
-        <li class="menuitem"><a onclick="Exportar()">Export to CSV</a></li>
-        <li class="menuSeparador"></li>
-        <li class="menuitem"><a onclick="NovaLinhaInicio()">Add new line to the beginning</a></li>
-        <li class="menuitem"><a onclick="NovaLinhaAntes()">Add new line before this</a></li>
-        <li class="menuitem"><a onclick="NovaLinhaDepois()">Add new line after this</a></li>
-        <li class="menuitem"><a onclick="NovaLinhaFim()">Add new line to the end</a></li>
-        <li class="menuitem"><a onclick="EliminarLinha()">Remove Line</a></li>
-	</ul>
+	<div>
+
+	    <ul id="menu" class="menu">
+            <li class="menuitem"><a onclick="getDados()">Save</a></li>
+            <li class="menuitem"><a onclick="Exportar()">Export to CSV</a></li>
+            <li class="menuSeparador"></li>
+            <li class="menuitem"><a onclick="NovaLinhaInicio()">Add new line to the beginning</a></li>
+            <li class="menuitem"><a onclick="NovaLinhaAntes()">Add new line before this</a></li>
+            <li class="menuitem"><a onclick="NovaLinhaDepois()">Add new line after this</a></li>
+            <li class="menuitem"><a onclick="NovaLinhaFim()">Add new line to the end</a></li>
+            <li class="menuitem"><a onclick="EliminarLinha()">Remove Line</a></li>
+	    </ul>
+    </div>
 </body>
 
 </html>
