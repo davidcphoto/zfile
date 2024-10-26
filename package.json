@@ -13,11 +13,16 @@
     "mainframe",
     "David Canto",
     "zos",
+    "binary",
+    "copy",
     "comp-3",
     "ebcdic",
     "flat file",
     "file manager",
     "copybook"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
   ],
   "icon": "imagens/zFile.png",
   "engines": {
@@ -26,41 +31,12 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
         "command": "zfile.OpenFile",
         "title": "zFile - Open File"
-      },
-      {
-        "command": "zfile.Save",
-        "title": "Save"
-      },
-      {
-        "command": "zfile.AddLineAfter",
-        "title": "Add Line After"
-      },
-      {
-        "command": "zfile.AddLineBefore",
-        "title": "Add Line Before"
-      },
-      {
-        "command": "zfile.AddLineBeginning",
-        "title": "Add Line to the beginning"
-      },
-      {
-        "command": "zfile.AddLineEnd",
-        "title": "Add Line to the end"
-      },
-      {
-        "command": "zfile.RemoveLine",
-        "title": "Remove Line"
-      },
-      {
-        "command": "zfile.Export",
-        "title": "Export to CSV"
       }
     ],
     "menus": {
@@ -69,43 +45,6 @@
           "when": "view == zowe.ds.explorer && viewItem =~ /^(ds)/",
           "command": "zfile.OpenFile",
           "group": "910_zfile01"
-        }
-      ],
-      "webview/context": [
-        {
-          "command": "zfile.Save",
-          "when": "webviewId == zFile",
-          "group": "911_zfile@1"
-        },
-        {
-          "command": "zfile.Export",
-          "when": "webviewId == zFile",
-          "group": "911_zfile@2"
-        },
-        {
-          "command": "zfile.AddLineBeginning",
-          "when": "webviewId == zFile",
-          "group": "912_zfile@1"
-        },
-        {
-          "command": "zfile.AddLineEnd",
-          "when": "webviewId == zFile",
-          "group": "912_zfile@2"
-        },
-        {
-          "command": "zfile.AddLineAfter",
-          "when": "webviewId == zFile",
-          "group": "912_zfile@3"
-        },
-        {
-        "command": "zfile.AddLineBefore",
-        "when": "webviewId == zFile",
-        "group": "912_zfile@4"
-      },
-        {
-          "command": "zfile.RemoveLine",
-          "when": "webviewId == zFile",
-          "group": "912_zfile@5"
         }
       ]
     },

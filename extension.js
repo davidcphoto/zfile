@@ -1005,7 +1005,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			}
 
 			.selecionado {
-            	box-shadow: 0px 0px 0px 5px var(--vscode-list-activeSelectionBackground);
+            	box-shadow: 0px 0px 0px 5px var(--vscode-editor-inactiveSelectionBackground);
 			}
 
             .menuitem {
@@ -1101,7 +1101,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             tr:hover, input:hover {
                 background-color: var(--vscode-list-activeSelectionBackground);
 				border-color: var(--vscode-list-activeSelectionBackground);
-            	box-shadow: 0px 0px 0px 5px var(--vscode-editor-inactiveSelectionBackground);
+            	box-shadow: 0px 0px 0px 5px var(--vscode-list-activeSelectionBackground);
             }
 
             .numeros {
