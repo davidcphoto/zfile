@@ -866,6 +866,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	let Cabecalho = '<th>#</th>';
 	let NLinha = 1;
+	let NColunas = 0;
 	// let NColuna = 1;
 	// const Save = '$(save)';
 
@@ -873,6 +874,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 	for (let i = 0; i < dados.Cabecalho.length; i++) {
 		const element = '<th>' + dados.Cabecalho[i] + '</th>';
 		Cabecalho += element;
+		++NColunas;
 		if (dados.Tipo[i] == zPic.ValidaTipoCampo.Alfanumerico ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.Display ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.National
@@ -1141,6 +1143,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
             let LinhaClicada=0;
 			let NumeroLinhas = ${NLinha};
+			let NColunas = ${NColunas};
 	        const vscode = acquireVsCodeApi();
 
 			function clicarmenu() {
@@ -1239,7 +1242,14 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			    console.log('EliminarLinha');
 
 			    console.log(LinhaClicada);
-				const element = document.getElementById("Linha" + LinhaClicada.toString());
+				--NumeroLinhas;
+				const element = document.getElementById("Linha" + NumeroLinhas.toString());
+
+				const Seguinte = LinhaClicada * NColunas;
+				const Inicio = Seguinte - NColunas;
+			    const Total = document.getElementsByName("tabela").length;
+
+				deslocaInverso(Inicio,Seguinte,Total);
                 element.remove();
 				esconde();
 			}
@@ -1293,6 +1303,27 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 	        		}
 
 	        		--j;
+
+	        	}
+
+
+	        }
+
+
+	        function deslocaInverso(Inicial, Seguinte, Total) {
+
+			    console.log('Inicio ' + Inicial);
+			    console.log('Seguinte ' + Seguinte);
+			    console.log('Total ' + Total);
+			    let j=Seguinte;
+
+	        	for (let i = Inicial; i < Total - NColunas; i++) {
+			    console.log('i ' + i);
+			    console.log('j ' + j);
+
+				    document.getElementsByName("tabela")[i].value = document.getElementsByName("tabela")[j].value;
+                    document.getElementsByName("tabela")[j].value = '';
+	        		++j;
 
 	        	}
 
