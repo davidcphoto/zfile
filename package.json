@@ -2,7 +2,7 @@
   "name": "zfile",
   "displayName": "zFile",
   "description": "File reader/editor for mainframe",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "DavidCanto",
   "repository": {
     "url": "https://github.com/davidcphoto/zFile"
