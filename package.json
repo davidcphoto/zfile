@@ -2,7 +2,7 @@
   "name": "zfile",
   "displayName": "zFile",
   "description": "File reader/editor for mainframe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "DavidCanto",
   "repository": {
     "url": "https://github.com/davidcphoto/zFile"
@@ -19,7 +19,9 @@
     "ebcdic",
     "flat file",
     "file manager",
-    "copybook"
+    "copybook",
+    "zowe",
+    "file"
   ],
   "activationEvents": [
     "onStartupFinished"
