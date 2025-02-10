@@ -12,5 +12,11 @@
     ],
     "javascript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false,
     "typescript.preferences.organizeImports": {
-    }
+    },
+    "zSearch.SearchStrings.ListOfPreviousSearchStrings": [
+        "accdc"
+    ],
+    "zSearch.SearchFilters.ListOfPreviousSearchFilters": [
+        "ami"
+    ]
 }
