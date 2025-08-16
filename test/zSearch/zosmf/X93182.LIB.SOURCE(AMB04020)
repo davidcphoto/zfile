@@ -1,0 +1,2609 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. AMB04020.
+      ******************************************************************
+      * ACESSO A DUAS TABELAS E ESCRITA EM UM FICHEIRO                 *
+      ******************************************************************
+      *                    ASSOCIACAO MUTUALISTA                       *
+      *                    *********************                       *
+      *                                                                *
+      *                                                                *
+      *                        TITULO DO PROGRAMA                      *
+      *                *********************************               *
+      *                                                                *
+      *                                                                *
+      *    PROGRAMA   : AMB04020.                                      *
+      *    DESCRICAO  : ESTE PROGRAMA EXECUTA NA CADEIA MENSAL DE      *
+      *                 VENCIMENTO DE QUOTIZACOES DAS MODALIDADES      *
+      *                 ASSOCIATIVAS. IRA PROCEDER A EMISAO DAS CARTAS *
+      *                 DE INSUFICIENCIA DE SALDO E DE AVISO DE        *
+      *                 SUSPENSAO DAS INSCRICOES EM G.P.E.             *
+      *                                                                *
+      *    TABELA     : AMVT6002                                       *
+      *                 AMVT0113                                       *
+      *                 AMVT0204                                       *
+      *                 AMVT1000                                       *
+      *                 CMVT1600                                       *
+      *                 ESVT0200                                       *
+      *                 SYVT2000                                       *
+      *                                                                *
+      *    INPUT      : AMCR4650                                       *
+      *    OUTPUT     : AMCR4011                                       *
+      ******************************************************************
+      *           L O G     D E     A L T E R A C O E S                *
+      ******************************************************************
+      *  INICIO  * AUTOR  * FIM    *  C O M E N T A R I O S            *
+      *          *        *        *                                   *
+      * 20051121 * XEPJGP *        * INACTIVAÇÃO DO CENDALT            *
+      *          *        *        *                                   *
+      * 20060529 * XPSJOF *        *NOVO ACESSO A CLT01 PARA FORMATAR  *
+      *          *        *        * O GTITULO                         *
+      *          *        *        *                                   *
+      * 07/05/10 * DESJPT *        * ALTERAçãO DE REGULAMENTOS         *
+      *          *        *        *                                   *
+      * 20090909 * XPSJOF *        * FORMATACAO DO AMCR4011 COM ZCLIBAN*
+      *          *        *        * E ZMORBAN (VIEW 04 DA AMT02)      *
+      *          *        *        *                                   *
+      * 20100922 * XPSJOF *        * FORMATACAO DO AMCR4011 COM        *
+      *          *        *        * CBLTITCL VIEW DA CLT01 PASSOU A   *
+      *          *        *        * SER A 16 (ERA A 00)               *
+      *          *        *        *                                   *
+      * 20120924 * XPSJOF *        * ALTERACAO ESTATUTOS (VINC ASS)    *
+      *          *        *        *                                   *
+      * 20130124 * XPSJOF *        * ALTERACAO REGULAMENTOS            *
+      *          *        *        *                                   *
+      * 20130403 * X92631 *        * DEIXA DE ACEDER 'A TABELA AMT02.  *
+      *          *        *        * PASSA A ACEDER 'AS TABELAS AMT22  *
+      *          *        *        * E AMT08, COM RECURSO 'A COPY      *
+      *          *        *        * AMCP4000.                         *
+      *          *        *        *                                   *
+      * 20160122 * DESVIP *        * SAIR AS CARTAS DE ATRASO PARA AS  *
+      * MC-0830  *        *        * QA MEIA ISENTAS (INCLUI A MEIA    *
+      *          *        *        * QUOTA MAIS TOTAL DA INDEMNIZACAO) *
+      *          *        *        * RETIRAR ACESSO A AMR01009         *
+      *          *        *        *                                   *
+      * 20180622 * ACC    *        * TRATAMENTO DE IBAN                *
+      *  C82065  *        *        *                                   *
+      *          *        *        *                                   *
+      * 20181221 * DESMSG *        * INCLUSÃO DE COMMITS               *
+      *          *        *        *                                   *
+      * 20190223 * XZ0643 * C82065 * MOIC - R2 - TRATAMENTO ICOBRADO   *
+      *          *        *        *                                   *
+      * 20220316 * XZ0643 * SEGREGACAO CLIENTES MGAM - MORADAS         *
+      *          * (ALT01)* OBTENCAO MORADA '00' NA GMT05 e NAO CLT01  *
+      * 20220727 * XZ3005 * SEGREGACAO CLIENTES MGAM                   *
+      *          * (ALT02)*                                            *
+      *          *        * DADOS BASICOS DE CLIENTE:                  *
+      *          *        *   CLT07 -> GMT09_RELCLI                    *
+      *          *        *   CLT01 -> GMT10_BASICOS                   *
+      *          *        *   CLT05 -> GMT11_COMPPART                  *
+      *          *        *   CLT38 -> GMT11_COMPPART                  *
+      *          *        *   CLT06 -> GMT12_COMPEMP                   *
+      *          *        *                                            *
+      * 20221016 * 93295  * TROCA GMVT10-ZCLIENTE POR WS-ZCLIBAN       *
+      ******************************************************************00420073
+      * 2024-12-17 * XZ3305 * NOVOS REGULAMENTOS F1                     00420074
+      ******************************************************************00420075
+      ******************************************************************
+       ENVIRONMENT DIVISION.
+      ******************************************************************
+      *           E N V I R O N M E N T         D I V I S I O N        *
+      ******************************************************************
+      *
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-4381.
+       OBJECT-COMPUTER. IBM-4381.
+       SPECIAL-NAMES. DECIMAL-POINT IS COMMA.
+      *
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+      *
+           SELECT AMCR4011                ASSIGN TO AMCR4011
+                              FILE STATUS IS STATUS-AMCR4011.
+      *
+           SELECT AMCR4650                ASSIGN TO AMCR4650
+                              FILE STATUS IS STATUS-INPUT.
+      *
+       COPY AMCW9981.
+      *
+      ******************************************************************
+      *              D A T A   D I V I S I O N                         *
+      ******************************************************************
+       DATA DIVISION.
+       FILE SECTION.
+      *
+       FD  AMCR4011                    LABEL RECORD IS STANDARD
+                                       DATA RECORD IS AMCR4011-REGISTO
+                                       RECORDING MODE IS F
+                                       BLOCK CONTAINS 0.
+      *C82065(I)
+      *01  AMCR4011-REG                PIC X(334).
+       01  AMCR4011-REG                PIC X(359).
+      *C82065(F)
+      *
+       FD  AMCR4650                    LABEL RECORD IS STANDARD
+                                       DATA RECORD IS AMCR4650-REGISTO
+                                       RECORDING MODE IS F
+                                       BLOCK CONTAINS 0.
+       COPY AMCR4650.
+      *
+       COPY AMCW9982.
+
+       COPY AMCR1009.
+      *
+      ******************************************************************
+      *                  WORKING STORAGE SECTION                       *
+      ******************************************************************
+       WORKING-STORAGE SECTION.
+      *
+       01  FILLER                          PIC X(40) VALUE
+           'INICIO WORKING-STORAGE AMB04020         '.
+      *
+      ******************************************************************
+      *            COPYBOOK DE MORADA ENVIO CORRESPONDENCIA            *
+      ******************************************************************
+      *
+      *MC-0830-I
+      *COPY AMCB1009.
+      *MC-0830-F
+
+       COPY AMCW9983.
+      *
+      *C82065(I)
+       COPY AMCK0002.
+      *C82065(F)
+
+
+
+      ******************************************************************
+      *           COPY'S FICHEIROS                                     *
+      ******************************************************************
+      *
+       COPY AMCR4011.
+      *
+      ******************************************************************
+      *           DECLARACOES DE DB2                                   *
+      ******************************************************************
+      *
+      *C82065(I)
+      *    EXEC SQL INCLUDE AMCD0100 END-EXEC.
+           EXEC SQL INCLUDE AMCD0113 END-EXEC.
+      *C82065(F)
+           EXEC SQL INCLUDE AMCD0800 END-EXEC.
+           EXEC SQL INCLUDE AMCD2200 END-EXEC.
+           EXEC SQL INCLUDE AMCW4000 END-EXEC.
+           EXEC SQL INCLUDE AMCD1000 END-EXEC.
+      *    EXEC SQL INCLUDE AMCD6000 END-EXEC.
+           EXEC SQL INCLUDE AMCD6002 END-EXEC.
+           EXEC SQL INCLUDE CLCD0800 END-EXEC.
+           EXEC SQL INCLUDE CMCD1600 END-EXEC.
+      *ALT02(I)
+           EXEC SQL INCLUDE GMCD1000 END-EXEC.
+      *    EXEC SQL INCLUDE CLCD0116 END-EXEC.
+      *ALT02(F)
+      *ALT01(I)
+           EXEC SQL INCLUDE GMCD0500 END-EXEC.
+      *ALT02(F)
+      *
+      *
+      ******************************************************************
+      *           AREA DE COMUNICACAO DO SQL                           *
+      ******************************************************************
+      *
+           EXEC SQL INCLUDE ATCW0006 END-EXEC.
+      *
+      ******************************************************************
+      *                  MENSAGENS                                     *
+      ******************************************************************
+      *
+       01  MSG-MENSAGENS.
+      *
+      * MENSAGENS PARA FICHEIROS
+      *
+           05 MSG-OPEN-AMCR4011            PIC X(50) VALUE
+           'ERRO ABERTURA NO FICHEIRO AMCR4011 - FILE STATUS  '.
+           05 MSG-WRITE-AMCR4011           PIC X(50) VALUE
+           'ERRO ESCRITA FICHEIRO AMCR4011 - FILE STATUS      '.
+           05 MSG-CLOSE-AMCR4011           PIC X(50) VALUE
+           'ERRO FECHO NO FICHEIRO AMCR4011 - FILE STATUS     '.
+      *
+           05 MSG-OPEN-INPUT         PIC X(50) VALUE
+           'ERRO ABERTURA NO FICHEIRO INPUT - FILE STATUS  '.
+           05 MSG-READ-INPUT         PIC X(50) VALUE
+           'ERRO LEITURA FICHEIRO INPUT - FILE STATUS      '.
+           05 MSG-CLOSE-INPUT        PIC X(50) VALUE
+           'ERRO FECHO NO FICHEIRO INPUT - FILE STATUS     '.
+      *
+      * MENSAGENS DE TABELAS
+      *
+           05 MSG-OPEN-AMVT0113            PIC X(50) VALUE
+           'ERRO ABERTURA CURSOR AMVT0113                     '.
+           05 MSG-FETCH-AMVT0113           PIC X(50) VALUE
+           'ERRO LEITURA TABELA AMVT0113                      '.
+           05 MSG-CLOSE-AMVT0113           PIC X(50) VALUE
+           'ERRO FECHO CURSOR AMVT0113                        '.
+           05 MSG-SELECT-AMVT0113          PIC X(50) VALUE
+           'ERRO SELECT TABELA   AMVT0113                     '.
+      *
+           05 MSG-SELECT-AMVT1000          PIC X(50) VALUE
+           'ERRO SELECT TABELA   AMVT1000                     '.
+      *
+           05 MSG-OPEN-AMVT6002            PIC X(50) VALUE
+           'ERRO ABERTURA CURSOR AMVT6002                     '.
+           05 MSG-FETCH-AMVT6002           PIC X(50) VALUE
+           'ERRO LEITURA TABELA AMVT6002                      '.
+           05 MSG-CLOSE-AMVT6002           PIC X(50) VALUE
+           'ERRO FECHO CURSOR AMVT6002                        '.
+           05 MSG-SELECT-AMVT6002          PIC X(50) VALUE
+           'ERRO SELECT TABELA   AMVT6002                     '.
+           05 MSG-UPDATE-AMVT6002          PIC X(50) VALUE
+           'ERRO UPDATE TABELA   AMVT6002                     '.
+      *
+           05 MSG-OPEN-CLVT0800          PIC X(50) VALUE
+           'ERRO OPEN CURSOR DA TABELA CLVT0800             '.
+           05 MSG-FETCH-CLVT0800         PIC X(50) VALUE
+           'ERRO FETCH  TABELA CLVT0800                     '.
+           05 MSG-CLOSE-CLVT0800         PIC X(50) VALUE
+           'ERRO CLOSE CURSOR DA TABELA CLVT0800            '.
+      *
+           05 MSG-SELECT-CMVT1600          PIC X(50) VALUE
+           'ERRO SELECT TABELA   CMVT1600                     '.
+      *
+           05 MSG-LOCK-TABLE-AMT60         PIC X(50) VALUE
+           'ERRO NO LOCK TABLE DA AMT60_QUOTVENC              '.
+      *
+           05 MSG-ERRO-AMCP4000            PIC X(50) VALUE
+           'ERRO NO ACESSO A COPY PROCEDURE AMCP4000          '.
+      ******************************************************************
+      *                  FILE STATUS                                   *
+      ******************************************************************
+      *
+       01  STATUS-AMCR4011                 PIC X(02)   VALUE '00'.
+           88 AMCR4011-OK                              VALUE '00'.
+           88 AMCR4011-EOF                             VALUE '10'.
+      *
+       01  STATUS-INPUT                    PIC X(02) VALUE '00'.
+           88 INPUT-OK                  VALUE '00'.
+           88 INPUT-EOF                 VALUE '10'.
+      *
+      ******************************************************************
+      *                  STATUS DAS TABELAS                            *
+      ******************************************************************
+      *
+       01  STATUS-AMVT0113                 PIC S9(03) VALUE +000.
+           88  AMVT0113-NOTFND                        VALUE +100.
+           88  AMVT0113-OK                            VALUE +0.
+      *
+      *X92631 2013-04-02 I
+      *01  STATUS-AMVT0204                 PIC S9(03) VALUE +000.
+      *    88  AMVT0204-NOTFND                        VALUE +100.
+      *    88  AMVT0204-OK                            VALUE +0.
+      *X92631 2013-04-02 F
+      *
+       01  STATUS-AMVT1000                 PIC S9(03) VALUE +000.
+           88  AMVT1000-NOTFND                        VALUE +100.
+           88  AMVT1000-OK                            VALUE +0.
+      *
+       01  STATUS-AMVT6002                 PIC S9(03) VALUE +000.
+           88  AMVT6002-NOTFND                        VALUE +100.
+           88  AMVT6002-OK                            VALUE +0.
+      *
+       01  STATUS-CLVT0800               PIC S9(03) VALUE +000.
+           88  CLVT0800-NOTFND                      VALUE +100.
+           88  CLVT0800-OK                          VALUE +0.
+      *
+       01  STATUS-CMVT1600                 PIC S9(03) VALUE +000.
+           88  CMVT1600-NOTFND                        VALUE +100.
+           88  CMVT1600-OK                            VALUE +0.
+      *
+       01  STATUS-GMVT1000                 PIC S9(03) VALUE +000.
+           88  GMVT1000-NOTFND                        VALUE +100.
+           88  GMVT1000-OK                            VALUE +0.
+      *
+      *ALT01(I)
+       01  STATUS-GMVT0500                 PIC S9(03) VALUE +000.
+           88  GMVT0500-NOTFND                        VALUE +100.
+           88  GMVT0500-OK                            VALUE +0.
+      *ALT02(F)
+       01  STATUS-LOCK-TABLE               PIC S9(03) VALUE +000.
+           88  LOCK-TABLE-OK                          VALUE +0.
+      *
+      ******************************************************************
+      *                  CONSTANTES                                    *
+      ******************************************************************
+      *
+       01  WS-CON-CONTANTES.
+           05 WS-CON-N1                PIC 9(01)     VALUE 1.
+           05 WS-CON-N2                PIC 9(01)     VALUE 2.
+           05 WS-CON-N12               PIC 9(02)     VALUE 12.
+           05 WS-CON-N15               PIC 9(02)     VALUE 15.
+           05 WS-CON-ABEND-GRAVE       PIC 9(02)     VALUE 16.
+           05 WS-CON-N999              PIC 9(03)     VALUE 999.
+           05 WS-INDICADOR             PIC S9(04)    COMP VALUE ZEROS.
+
+           05 WS-CON-1                 PIC X(01)     VALUE '1'.
+           05 WS-CON-A                 PIC X(01)     VALUE 'A'.
+           05 WS-CON-C                 PIC X(01)     VALUE 'C'.
+           05 WS-CON-E                 PIC X(01)     VALUE 'E'.
+           05 WS-CON-L                 PIC X(01)     VALUE 'L'.
+           05 WS-CON-N                 PIC X(01)     VALUE 'N'.
+           05 WS-CON-S                 PIC X(01)     VALUE 'S'.
+           05 WS-CON-01                PIC X(02)     VALUE '01'.
+           05 WS-CON-02                PIC X(02)     VALUE '02'.
+           05 WS-CON-07                PIC X(02)     VALUE '07'.
+           05 WS-CON-08                PIC X(02)     VALUE '08'.
+           05 WS-CON-40                PIC X(02)     VALUE '40'.
+           05 WS-CON-50                PIC X(02)     VALUE '50'.
+           05 WS-CON-60                PIC X(02)     VALUE '60'.
+           05 WS-CON-70                PIC X(02)     VALUE '70'.
+           05 WS-CON-6B                PIC X(02)     VALUE '6B'.
+           05 WS-CON-7B                PIC X(02)     VALUE '7B'.
+           05 WS-CON-71                PIC X(02)     VALUE '71'.
+           05 WS-CON-80                PIC X(02)     VALUE '80'.
+           05 WS-CON-8B                PIC X(02)     VALUE '8B'.
+           05 WS-CON-90                PIC X(02)     VALUE '90'.
+           05 WS-CON-9B                PIC X(02)     VALUE '9B'.
+           05 WS-CON-AM                PIC X(02)     VALUE 'AM'.
+           05 WS-CON-001               PIC X(03)     VALUE '001'.
+           05 WS-CON-002               PIC X(03)     VALUE '002'.
+           05 WS-CON-020               PIC X(03)     VALUE '020'.
+           05 WS-CON-00036             PIC X(05)     VALUE '00036'.
+           05 WS-CON-620               PIC X(03)     VALUE '620'.
+           05 WS-CON-E01               PIC X(03)     VALUE 'E01'.
+           05 WS-CON-M01               PIC X(03)     VALUE 'M01'.
+           05 WS-CON-PRT               PIC X(03)     VALUE 'PRT'.
+      *MC-0830-I
+      *    05 WS-CON-AMR01009          PIC X(08)     VALUE 'AMR01009'.
+      *MC-0830-F
+      *
+      ******************************************************************
+      *                  FLAGS E SWITCHES                              *
+      ******************************************************************
+      *
+       01  WS-PARAM                    PIC X(09).
+       01  FILLER REDEFINES WS-PARAM.
+           05 WS-COMMIT                PIC 9(08).
+           05 SW-DEBUG                 PIC X(01).
+              88 SW-DEBUG-SIM                     VALUE 'S'.
+              88 SW-DEBUG-NAO                     VALUE 'N'.
+
+       01  SW-CARTA-INSUF-SALDO        PIC X(01)  VALUE 'N'.
+           88  CARTA-INSUF-SALDO                  VALUE 'S'.
+
+       01  SW-CARTA-INSUF-SALDO-GPE    PIC X(01)  VALUE 'N'.
+           88  CARTA-INSUF-SALDO-GPE              VALUE 'S'.
+
+       01  SW-CARTA-SUSPENSAO-GPE      PIC X(01)  VALUE 'N'.
+           88  CARTA-SUSPENSAO-GPE                VALUE 'S'.
+
+       01  SW-CARTA-ASSOCIACAO         PIC X(01)  VALUE 'N'.
+           88  CARTA-ASSOCIACAO                   VALUE 'S'.
+
+       01  SW-DIV-QA-JOIA-INCLUIDA     PIC X(01)  VALUE 'N'.
+           88  DIV-QA-JOIA-INCLUIDA               VALUE 'S'.
+           88  DIV-QA-JOIA-NAO-INCLUIDA           VALUE 'N'.
+      *
+       01  SWITCH-GPE-VALIDA           PIC X(01)  VALUE 'N'.
+           88 SW-GPE-NAO-VALIDA                   VALUE 'N'.
+           88 SW-GPE-VALIDA                       VALUE 'S'.
+      *
+       01  SWITCH-PARAR                PIC X(01)  VALUE 'N'.
+           88 SW-NAO-PARAR                        VALUE 'N'.
+           88 SW-PARAR                            VALUE 'S'.
+      *
+       01  SWITCH-ACEDE-AMT01          PIC X(01)  VALUE 'N'.
+           88 SW-NAO-ACEDE-AMT01                  VALUE 'N'.
+           88 SW-ACEDE-AMT01                      VALUE 'S'.
+      *
+       01  ABEND-CALLER-ID             PIC X(60).
+      *
+      ******************************************************************
+      *           VARIAVEIS                                            *
+      ******************************************************************
+      *
+       01  WS-VARIAVEIS.
+           05 WS-ROT-CALL              PIC X(08)     VALUE SPACES.
+           05 WS-SQLCODE               PIC -999.
+
+           05 COD-RETORNO1             PIC S9(03)    COMP VALUE ZEROS.
+           05 COD-RETORNO2             PIC S9(03)    COMP VALUE ZEROS.
+           05 COD-RETORNO3             PIC S9(03)    COMP VALUE ZEROS.
+
+           05 WS-COUNT                 PIC S9(04)    COMP-3 VALUE ZEROS.
+      *20181221
+           05 WS-COUNT-UPD             PIC  9(08)           VALUE ZEROS.
+           05 WS-DIFERENCIA-MESES      PIC S9(04)    COMP-3 VALUE ZEROS.
+           05 WS-ZCLIBAN               PIC S9(10)V   COMP-3 VALUE 0.
+           05 WS-ZMORBAN               PIC S9(03)V   COMP-3 VALUE 0.
+
+           05 WS-MQTSUPL-TOT           PIC S9(09)V99 COMP-3 VALUE ZEROS.
+           05 WS-MQUOTAAC-TOT          PIC S9(11)V99 COMP-3 VALUE ZEROS.
+           05 WS-MINDEMNI-TOT          PIC S9(11)V99 COMP-3 VALUE ZEROS.
+           05 WS-MSALDO                PIC S9(13)V99 COMP-3 VALUE ZEROS.
+
+           05 WS-CTIPSOC-AUX           PIC X(01)     VALUE SPACES.
+           05 WS-ZSOCIO-AUX            PIC S9(07)V   COMP-3 VALUE ZEROS.
+           05 WS-CDIGISOC-AUX          PIC S9(01)V   COMP-3 VALUE ZEROS.
+           05 WS-ZINSCRIC-AUX          PIC S9(03)V   COMP-3 VALUE ZEROS.
+           05 WS-CPRODUTO-AUX          PIC X(02)     VALUE SPACES.
+           05 WS-CSUBPROD-AUX          PIC X(02)     VALUE SPACES.
+           05 WS-CBALCAO-AUX           PIC X(03)     VALUE SPACES.
+           05 WS-CNUMECTA-AUX          PIC X(06)     VALUE SPACES.
+           05 WS-CDIGICTA-AUX          PIC X(01)     VALUE SPACES.
+           05 WS-CBALSAQ-AUX           PIC X(03)     VALUE SPACES.
+           05 WS-CPRODSAQ-AUX          PIC X(02)     VALUE SPACES.
+           05 WS-CCNTSAQ-AUX           PIC X(06)     VALUE SPACES.
+           05 WS-CDIGISAQ-AUX          PIC X(01)     VALUE SPACES.
+           05 WS-MQTSUPL-AUX           PIC S9(09)V99 COMP-3 VALUE ZEROS.
+           05 WS-MQUOTAAC-AUX          PIC S9(11)V99 COMP-3 VALUE ZEROS.
+           05 WS-MINDEMNI-AUX          PIC S9(11)V99 COMP-3 VALUE ZEROS.
+           05 WS-CSITSUB-AUX           PIC X(02)     VALUE SPACES.
+           05 WS-CESTADO-AUX           PIC X(02)     VALUE SPACES.
+           05 WS-ZCLIENTE-AUX          PIC S9(10)V   COMP-3 VALUE ZEROS.
+      *C82065(I)
+           05 WS-CPAISIBSQ-AUX         PIC X(04)     VALUE SPACES.
+           05 WS-CBANIBSQ-AUX          PIC X(04)     VALUE SPACES.
+           05 WS-CCTAIBSQ-AUX          PIC X(15)     VALUE SPACES.
+           05 WS-CDIGIBSQ-AUX          PIC X(02)     VALUE SPACES.
+      *C82065(F)
+
+      *X92631 2013-04-03 I
+           05 WS-AMT22-CPRODEMP        PIC X(02)     VALUE SPACES.
+           05 WS-AMT22-CBALCEMP        PIC X(03)     VALUE SPACES.
+           05 WS-AMT22-CNUMEMP         PIC X(06)     VALUE SPACES.
+           05 WS-AMT22-CDIGIEMP        PIC X(01)     VALUE SPACES.
+           05 WS-AMT22-ZEMPOIC         PIC X(20)     VALUE SPACES.
+           05 WS-AMT22-CBANCO          PIC X(04)     VALUE SPACES.
+           05 WS-AMT22-QVIDA           PIC S9(03)V   COMP-3 VALUE ZEROS.
+           05 WS-QVIDA-AUX             PIC 9(01)     VALUE ZEROS.
+      *X92631 2013-04-03 F
+
+           05 WS-DATAOPER.
+              10 WS-DATAOPER-ANO       PIC 9(04)     VALUE ZEROS.
+              10 FILLER                PIC X(01)     VALUE SPACES.
+              10 WS-DATAOPER-MES       PIC 9(02)     VALUE ZEROS.
+              10 FILLER                PIC X(01)     VALUE SPACES.
+              10 WS-DATAOPER-DIA       PIC 9(02)     VALUE ZEROS.
+
+           05 WS-DCRIACAO-AUX.
+              10 WS-DCRIACAO-AUX-ANO   PIC 9(04)     VALUE ZEROS.
+              10 FILLER                PIC X(01)     VALUE SPACES.
+              10 WS-DCRIACAO-AUX-MES   PIC 9(02)     VALUE ZEROS.
+              10 FILLER                PIC X(01)     VALUE SPACES.
+              10 WS-DCRIACAO-AUX-DIA   PIC 9(02)     VALUE ZEROS.
+
+           05 WS-CAMPOS-CORRENTES.
+              10 WS-CTIPSOC            PIC X(01)     VALUE SPACES.
+              10 WS-ZSOCIO             PIC S9(07)V   COMP-3 VALUE ZEROS.
+              10 WS-CDIGISOC           PIC S9(01)V   COMP-3 VALUE ZEROS.
+              10 WS-ZINSCRIC           PIC S9(03)V   COMP-3 VALUE ZEROS.
+              10 WS-CSUBPROD           PIC X(02)     VALUE SPACES.
+              10 WS-DQUOTA             PIC X(10)     VALUE SPACES.
+              10 WS-ICALCIND           PIC X(01)     VALUE SPACES.
+              10 WS-CPRODUTO           PIC X(02)     VALUE SPACES.
+              10 WS-CBALCAO            PIC X(03)     VALUE SPACES.
+              10 WS-CNUMECTA           PIC X(06)     VALUE SPACES.
+              10 WS-CDIGICTA           PIC X(01)     VALUE SPACES.
+              10 WS-GTITULO            PIC X(40)     VALUE SPACES.
+              10 WS-MEXDESCO           PIC S9(11)V99 COMP-3 VALUE ZEROS.
+              10 WS-CBALSAQ            PIC X(03)     VALUE SPACES.
+              10 WS-CPRODSAQ           PIC X(02)     VALUE SPACES.
+              10 WS-CCNTSAQ            PIC X(06)     VALUE SPACES.
+              10 WS-CDIGISAQ           PIC X(01)     VALUE SPACES.
+              10 WS-ZCLIENTE           PIC S9(10)V   COMP-3 VALUE ZEROS.
+              10 WS-ZMORADA            PIC S9(03)V   COMP-3 VALUE ZEROS.
+              10 WS-CENDALT            PIC X(03)     VALUE SPACES.
+              10 WS-CODPER             PIC X(03)     VALUE SPACES.
+              10 WS-MQTSUPL            PIC S9(09)V99 COMP-3 VALUE ZEROS.
+              10 WS-MQUOTAAC           PIC S9(11)V99 COMP-3 VALUE ZEROS.
+              10 WS-MINDEMNI           PIC S9(11)V99 COMP-3 VALUE ZEROS.
+              10 WS-DCRIACAO           PIC X(10)     VALUE SPACES.
+              10 WS-CBLTITCL           PIC X(03)     VALUE SPACES.
+      *C82065(I)
+              10 WS-CPAISIBSQ          PIC X(04)     VALUE SPACES.
+              10 WS-CBANIBSQ           PIC X(04)     VALUE SPACES.
+              10 WS-CCTAIBSQ           PIC X(15)     VALUE SPACES.
+              10 WS-CDIGIBSQ           PIC X(02)     VALUE SPACES.
+      *C82065(F)
+      *
+           05 WS-CAMPOS-ANTERIORES.
+              10 WS-CTIPSOC-ANT        PIC X(01)     VALUE SPACES.
+              10 WS-ZSOCIO-ANT         PIC S9(07)V   COMP-3 VALUE ZEROS.
+              10 WS-CDIGISOC-ANT       PIC S9(01)V   COMP-3 VALUE ZEROS.
+              10 WS-ZINSCRIC-ANT       PIC S9(03)V   COMP-3 VALUE ZEROS.
+              10 WS-CSUBPROD-ANT       PIC X(02)     VALUE SPACES.
+              10 WS-DQUOTA-ANT.
+                 15 WS-ANO-DQUOTA-ANT  PIC 9(04)     VALUE ZEROS.
+                 15 FILLER             PIC X(01)     VALUE SPACES.
+                 15 WS-MES-DQUOTA-ANT  PIC 9(02)     VALUE ZEROS.
+                 15 FILLER             PIC X(01)     VALUE SPACES.
+                 15 WS-DIA-DQUOTA-ANT  PIC 9(02)     VALUE ZEROS.
+              10 WS-ICALCIND-ANT       PIC X(01)     VALUE SPACES.
+              10 WS-CPRODUTO-ANT       PIC X(02)     VALUE SPACES.
+              10 WS-CBALCAO-ANT        PIC X(03)     VALUE SPACES.
+              10 WS-CNUMECTA-ANT       PIC X(06)     VALUE SPACES.
+              10 WS-CDIGICTA-ANT       PIC X(01)     VALUE SPACES.
+              10 WS-GTITULO-ANT        PIC X(40)     VALUE SPACES.
+              10 WS-MEXDESCO-ANT       PIC S9(11)V99 COMP-3 VALUE ZEROS.
+              10 WS-CBALSAQ-ANT        PIC X(03)     VALUE SPACES.
+              10 WS-CPRODSAQ-ANT       PIC X(02)     VALUE SPACES.
+              10 WS-CCNTSAQ-ANT        PIC X(06)     VALUE SPACES.
+              10 WS-CDIGISAQ-ANT       PIC X(01)     VALUE SPACES.
+              10 WS-ZCLIENTE-ANT       PIC S9(10)V   COMP-3 VALUE ZEROS.
+              10 WS-ZMORADA-ANT        PIC S9(03)V   COMP-3 VALUE ZEROS.
+              10 WS-CENDALT-ANT        PIC X(03)     VALUE SPACES.
+              10 WS-CODPER-ANT         PIC X(03)     VALUE SPACES.
+              10 WS-MQTSUPL-ANT        PIC S9(09)V99 COMP-3 VALUE ZEROS.
+              10 WS-MQUOTAAC-ANT       PIC S9(11)V99 COMP-3 VALUE ZEROS.
+              10 WS-MINDEMNI-ANT       PIC S9(11)V99 COMP-3 VALUE ZEROS.
+              10 WS-DCRIACAO-ANT       PIC X(10)     VALUE SPACES.
+              10 WS-CBLTITCL-ANT       PIC X(03)     VALUE SPACES.
+      *C82065(I)
+              10 WS-CPAISIBSQ-ANT      PIC X(04)     VALUE SPACES.
+              10 WS-CBANIBSQ-ANT       PIC X(04)     VALUE SPACES.
+              10 WS-CCTAIBSQ-ANT       PIC X(15)     VALUE SPACES.
+              10 WS-CDIGIBSQ-ANT       PIC X(02)     VALUE SPACES.
+      *C82065(F)
+      *
+       COPY ATCL0010.
+       COPY TBCL0001.
+       COPY ATCK0001.
+       COPY ATCK0002.
+       COPY ATCL0009.
+       COPY ATCW1000.
+      *
+      ******************************************************************
+      *              DECLARACOES DE CURSORES DB2                       *
+      ******************************************************************
+      *C82065_R2(I)
+      *    EXEC SQL
+      *20181221
+      **       DECLARE CRS-QUOTVENC CURSOR FOR
+      *        DECLARE CRS-QUOTVENC CURSOR WITH HOLD FOR
+      *            SELECT CTIPSOC ,
+      *                   ZSOCIO  ,
+      *                   CDIGISOC,
+      *                   ZINSCRIC,
+      *                   CSUBPROD,
+      *                   DQUOTA  ,
+      *                   ICALCIND,
+      *                   CPRODUTO,
+      *                   CBALCAO ,
+      *                   CNUMECTA,
+      *                   CDIGICTA,
+      *                   MEXDESCO,
+      *                   CBALSAQ ,
+      *                   CPRODSAQ,
+      *                   CCNTSAQ ,
+      *                   CDIGISAQ,
+      *                   ZCLIENTE,
+      *                   ZMORADA ,
+      *                   CENDALT ,
+      *                   CODPER  ,
+      *                   MQTSUPL ,
+      *                   MQUOTAAC,
+      *                   MINDEMNI,
+      *                   DCRIACAO
+      *              FROM AMVT6002_QUOTVENC
+      *             WHERE CSUBPROD <> '65'
+      *               AND CSUBPROD <> '66'
+      *               AND CSUBPROD <> '75'
+      *               AND CSUBPROD <> '85'
+      *               AND CSUBPROD <> '86'
+      * C82065(I)
+      **              AND ICOBRADO = 'N'
+      *               AND ( ICOBRADO = 'N'
+      *                OR ( ICOBRADO = 'X'
+      *                 AND CSITCOBR = 'RJC' ))
+      * C82065(F)
+      *               AND CCNTSAQ  <> '      '
+      *MC-0830-I
+      **              AND DQUOTA   >= DFIMISEN
+      *               AND (DQUOTA  >= DFIMISEN
+      *                OR (DQUOTA  <  DFIMISEN
+      *               AND CISENCAO = '02'))
+      *MC-0830-F
+      *             ORDER BY CTIPSOC,
+      *                   ZSOCIO,
+      *                   CDIGISOC,
+      *                   ZINSCRIC,
+      *                   CPRODUTO,
+      *                   CSUBPROD,
+      *                   DQUOTA DESC
+      *               FOR FETCH ONLY
+      *    END-EXEC.
+      *
+           EXEC SQL
+      *
+               DECLARE CRS-QUOTVENC CURSOR WITH HOLD FOR
+                   SELECT CTIPSOC ,
+                          ZSOCIO  ,
+                          CDIGISOC,
+                          ZINSCRIC,
+                          CSUBPROD,
+                          DQUOTA  ,
+                          ICALCIND,
+                          CPRODUTO,
+                          CBALCAO ,
+                          CNUMECTA,
+                          CDIGICTA,
+                          MEXDESCO,
+                          CBALSAQ ,
+                          CPRODSAQ,
+                          CCNTSAQ ,
+                          CDIGISAQ,
+                          ZCLIENTE,
+                          ZMORADA ,
+                          CENDALT ,
+                          CODPER  ,
+                          MQTSUPL ,
+                          MQUOTAAC,
+                          MINDEMNI,
+                          DCRIACAO
+                     FROM AMVT6002_QUOTVENC
+                    WHERE CSUBPROD <> '65'
+                      AND CSUBPROD <> '25'
+                      AND CSUBPROD <> '35'
+                      AND CSUBPROD <> '66'
+                      AND CSUBPROD <> '75'
+                      AND CSUBPROD <> '85'
+                      AND CSUBPROD <> '86'
+                 AND (
+                      (ICOBRADO = :AMCK0002-CON-ICOBRADO-NAOCOBR
+                  AND  CSITCOBR <>:AMCK0002-CON-CSITCOBR-EFETUAD)
+
+                   OR (ICOBRADO = :AMCK0002-CON-ICOBRADO-COBREXT
+                  AND  CSITCOBR = :AMCK0002-CON-CSITCOBR-REJCLI)
+
+                   OR (ICOBRADO = :AMCK0002-CON-ICOBRADO-COBREXT
+                  AND  CSITCOBR = :AMCK0002-CON-CSITCOBR-REJBANC)
+
+                   OR (ICOBRADO = :AMCK0002-CON-ICOBRADO-COBREXT
+                  AND  CSITCOBR = :AMCK0002-CON-CSITCOBR-CRIADA)
+                     )
+                      AND CCNTSAQ  <> '      '
+                      AND (DQUOTA  >= DFIMISEN
+                       OR (DQUOTA  <  DFIMISEN
+                      AND CISENCAO = '02'))
+                    ORDER BY CTIPSOC,
+                          ZSOCIO,
+                          CDIGISOC,
+                          ZINSCRIC,
+                          CPRODUTO,
+                          CSUBPROD,
+                          DQUOTA DESC
+                      FOR FETCH ONLY
+           END-EXEC.
+      *C82065_R2(F)
+
+           EXEC SQL
+                DECLARE CRS-AMT01 CURSOR FOR
+                  SELECT  CPRODUTO ,
+                          CBALCAO  ,
+                          CNUMECTA ,
+                          CDIGICTA
+                    FROM  AMVT0113_BASIOPER
+                   WHERE  CTIPSOC  = :AMVT0113-CTIPSOC
+                     AND  ZSOCIO   = :AMVT0113-ZSOCIO
+                     AND  CDIGISOC = :AMVT0113-CDIGISOC
+                     AND  CSUBPROD IN ('60', '80', '70', '90',
+                                       '6B', '8B', '7B', '9B')
+                     AND (CESTADO  = '01'
+                      OR  CESTADO  = '07'
+                      OR  CESTADO  = '08'
+                      OR  CESTADO  = '02')
+                     FOR FETCH ONLY
+           END-EXEC.
+      *
+       01  FILLER                          PIC X(40) VALUE
+           'FIM DA WORKING-STORAGE AMB04020         '.
+      *
+      ******************************************************************
+      *                  PROCEDURE DIVISION                            *
+      ******************************************************************
+       PROCEDURE DIVISION.
+      ******************************************************************
+      *    PROCESSO                                                    *
+      ******************************************************************
+       0000-MAINLINE.
+      *
+           ACCEPT WS-PARAM FROM SYSIN.
+
+           MOVE '0000-MAINLINE            ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           PERFORM 1000-INICIO-PROGRAMA
+              THRU 1999-INICIO-PROGRAMA-EXIT.
+
+           PERFORM 2000-PROCESSO
+              THRU 2999-PROCESSO-EXIT
+             UNTIL AMVT6002-NOTFND
+                OR SW-PARAR.
+
+           PERFORM 4000-FIM-PROGRAMA
+              THRU 4999-FIM-PROGRAMA-EXIT.
+      *
+       0000-MAINLINE-EXIT.
+           STOP RUN.
+      ******************************************************************
+      *                  1000-INICIO-PROGRAMA                          *
+      ******************************************************************
+       1000-INICIO-PROGRAMA.
+      *
+           MOVE '1000-INICIO-PROGRAMA     ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           PERFORM 1100-OPEN-AMCR4650
+              THRU 1199-OPEN-AMCR4650-EXIT.
+
+           PERFORM 1200-OBTEM-DATA-OPER
+              THRU 1299-OBTEM-DATA-OPER-EXIT.
+
+           EXEC SQL
+                LOCK TABLE AMT60_QUOTVENC IN EXCLUSIVE MODE
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-LOCK-TABLE  WS-SQLCODE.
+           IF NOT LOCK-TABLE-OK
+              DISPLAY MSG-LOCK-TABLE-AMT60  WS-SQLCODE
+           END-IF.
+
+           PERFORM 1111-OPEN-AMCR1009
+              THRU 1111-OPEN-AMCR1009-EXIT.
+
+           PERFORM 1300-OPEN-AMCR4011
+              THRU 1399-OPEN-AMCR4011-EXIT.
+
+           PERFORM 1400-OPEN-CURSOR
+              THRU 1499-OPEN-CURSOR-EXIT.
+
+           PERFORM 9000-FETCH-CURSOR
+              THRU 9099-FETCH-CURSOR-EXIT.
+
+           MOVE WS-CAMPOS-CORRENTES TO WS-CAMPOS-ANTERIORES.
+      *
+       1999-INICIO-PROGRAMA-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  1100-OPEN-AMCR4650                            *
+      ******************************************************************
+       1100-OPEN-AMCR4650.
+
+           MOVE '1100-OPEN-AMCR4650       ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+               DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           OPEN INPUT AMCR4650.
+
+           IF NOT INPUT-OK
+              DISPLAY MSG-OPEN-INPUT STATUS-INPUT
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+
+       1199-OPEN-AMCR4650-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  1200-OBTEM-DATA-OPER                          *
+      ******************************************************************
+       1200-OBTEM-DATA-OPER.
+      *
+           MOVE '1200-OBTEM-DATA-OPER     ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           INITIALIZE ATCL0010-COMMAREA
+               REPLACING ALPHANUMERIC DATA BY SPACES.
+
+           MOVE WS-CON-AM       TO ATCL0010-CAPLIC.
+
+           PERFORM ATCP0010-CAPLIC-DATAS
+              THRU ATCP0010-CAPLIC-DATAS-EXIT.
+
+           READ AMCR4650.
+
+           IF NOT INPUT-OK
+              DISPLAY MSG-READ-INPUT     STATUS-INPUT
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+
+           MOVE AMCR4650-DDIAOP TO WS-DATAOPER.
+      *
+       1299-OBTEM-DATA-OPER-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  1300-OPEN-AMCR4011                            *
+      ******************************************************************
+       1300-OPEN-AMCR4011.
+      *
+           MOVE '1300-OPEN-AMCR4011       ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           OPEN OUTPUT AMCR4011.
+
+           IF NOT AMCR4011-OK
+              DISPLAY MSG-OPEN-AMCR4011 STATUS-AMCR4011
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       1399-OPEN-AMCR4011-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  1400-OPEN-CURSOR                              *
+      ******************************************************************
+       1400-OPEN-CURSOR.
+      *
+           MOVE '1400-OPEN-CURSOR         ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                OPEN CRS-QUOTVENC
+           END-EXEC.
+
+           MOVE SQLCODE TO STATUS-AMVT6002  WS-SQLCODE.
+           IF NOT AMVT6002-OK
+              DISPLAY MSG-OPEN-AMVT6002 WS-SQLCODE
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       1499-OPEN-CURSOR-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  2000-PROCESSO                                 *
+      ******************************************************************
+       2000-PROCESSO.
+      *
+           MOVE '2000-PROCESSO ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           IF AMVT0113-CESTADO EQUAL WS-CON-01 OR
+              AMVT0113-CESTADO EQUAL WS-CON-07 OR
+              AMVT0113-CESTADO EQUAL WS-CON-08 OR
+              AMVT0113-CESTADO EQUAL WS-CON-02
+
+              IF AMVT0113-CSITSUB NOT EQUAL WS-CON-07
+
+                 IF WS-CTIPSOC  NOT EQUAL WS-CTIPSOC-ANT  OR
+                    WS-ZSOCIO   NOT EQUAL WS-ZSOCIO-ANT   OR
+                    WS-CDIGISOC NOT EQUAL WS-CDIGISOC-ANT OR
+                    WS-ZINSCRIC NOT EQUAL WS-ZINSCRIC-ANT OR
+                    WS-CPRODUTO NOT EQUAL WS-CPRODUTO-ANT OR
+                    WS-CSUBPROD NOT EQUAL WS-CSUBPROD-ANT
+                    PERFORM 2200-TRATA-CHAVE-DIFER
+                       THRU 2299-TRATA-CHAVE-DIFER-EXIT
+                 ELSE
+                    PERFORM 2300-TRATA-CHAVE-IGUAL
+                       THRU 2399-TRATA-CHAVE-IGUAL-EXIT
+                 END-IF
+              END-IF
+           END-IF.
+
+      *20181221
+           IF WS-COUNT-UPD > WS-COMMIT
+              DISPLAY 'VOU FAZER COMMIT'
+              EXEC SQL
+                   COMMIT
+              END-EXEC
+              MOVE ZEROS TO  WS-COUNT-UPD
+           END-IF.
+
+           PERFORM 9000-FETCH-CURSOR
+              THRU 9099-FETCH-CURSOR-EXIT.
+
+           IF AMVT6002-NOTFND
+              PERFORM 2200-TRATA-CHAVE-DIFER
+                 THRU 2299-TRATA-CHAVE-DIFER-EXIT
+
+              MOVE WS-CON-S  TO SWITCH-PARAR
+           END-IF.
+      *
+       2999-PROCESSO-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  2200-TRATA-CHAVE-DIFER                        *
+      ******************************************************************
+       2200-TRATA-CHAVE-DIFER.
+      *
+           MOVE '2200-TRATA-CHAVE-DIFER    ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           PERFORM 2231-VALIDA-CVIP
+              THRU 2231-VALIDA-CVIP-EXIT.
+
+           IF WS-CODPER-ANT EQUAL WS-CON-M01 OR
+              WS-CODPER-ANT EQUAL WS-CON-E01
+              PERFORM 2210-PERIODICIDADE-MENSAL
+                 THRU 2219-PERIODICIDADE-MENSAL-EXIT
+           ELSE
+              PERFORM 2220-PERIODICIDADE-OUTRAS
+                 THRU 2229-PERIODICIDADE-OUTRAS-EXIT
+           END-IF.
+
+           IF CARTA-INSUF-SALDO     OR
+              CARTA-INSUF-SALDO-GPE OR
+              CARTA-SUSPENSAO-GPE
+              PERFORM 2230-EMITE-CARTAS
+                 THRU 2239-EMITE-CARTAS-EXIT
+           END-IF.
+
+           PERFORM 3000-REPOE-ICALCIND
+              THRU 3999-REPOE-ICALCIND-EXIT.
+
+           IF WS-CTIPSOC  NOT EQUAL WS-CTIPSOC-ANT  OR
+              WS-ZSOCIO   NOT EQUAL WS-ZSOCIO-ANT   OR
+              WS-CDIGISOC NOT EQUAL WS-CDIGISOC-ANT
+              MOVE WS-CON-N TO SW-DIV-QA-JOIA-INCLUIDA
+           END-IF.
+
+           MOVE WS-CON-N TO SW-CARTA-INSUF-SALDO
+                            SW-CARTA-INSUF-SALDO-GPE
+                            SW-CARTA-SUSPENSAO-GPE
+                            SW-CARTA-ASSOCIACAO.
+
+           MOVE ZEROS    TO WS-MQTSUPL-TOT
+                            WS-MQUOTAAC-TOT
+                            WS-MINDEMNI-TOT.
+
+           MOVE WS-CAMPOS-CORRENTES TO WS-CAMPOS-ANTERIORES.
+
+           ADD WS-MQUOTAAC-ANT TO WS-MQUOTAAC-TOT.
+           SUBTRACT WS-MEXDESCO-ANT FROM WS-MQUOTAAC-TOT.
+           ADD WS-MQTSUPL-ANT  TO WS-MQTSUPL-TOT .
+           ADD WS-MINDEMNI-ANT TO WS-MINDEMNI-TOT.
+      *
+       2299-TRATA-CHAVE-DIFER-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  2210-PERIODICIDADE-MENSAL                     *
+      ******************************************************************
+       2210-PERIODICIDADE-MENSAL.
+      *
+           MOVE '2210-PERIODICIDADE-MENSAL   ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           IF WS-ICALCIND-ANT EQUAL WS-CON-C
+              MOVE WS-DCRIACAO-ANT  TO WS-DCRIACAO-AUX
+
+              IF WS-DCRIACAO-AUX-ANO NOT EQUAL WS-DATAOPER-ANO OR
+                 WS-DCRIACAO-AUX-MES NOT EQUAL WS-DATAOPER-MES OR
+                 WS-DCRIACAO-AUX-DIA     EQUAL WS-CON-N1
+                 PERFORM 9100-VALIDA-EMISSAO
+                    THRU 9199-VALIDA-EMISSAO-EXIT
+              END-IF
+           END-IF.
+
+           IF WS-CPRODUTO-ANT EQUAL WS-CON-71 AND
+             (WS-CSUBPROD-ANT EQUAL WS-CON-60  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-70  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-80  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-90  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-6B  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-7B  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-8B  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-9B) AND
+              WS-ICALCIND-ANT EQUAL WS-CON-C
+              MOVE WS-DCRIACAO-ANT  TO WS-DCRIACAO-AUX
+
+              IF WS-DCRIACAO-AUX-ANO NOT EQUAL WS-DATAOPER-ANO OR
+                 WS-DCRIACAO-AUX-MES NOT EQUAL WS-DATAOPER-MES OR
+                 WS-DCRIACAO-AUX-DIA     EQUAL WS-CON-N1
+                 PERFORM 9200-VALIDA-GPE
+                    THRU 9299-VALIDA-GPE-EXIT
+              END-IF
+           END-IF.
+      *
+       2219-PERIODICIDADE-MENSAL-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  2220-PERIODICIDADE-OUTRAS                     *
+      ******************************************************************
+       2220-PERIODICIDADE-OUTRAS.
+      *
+           MOVE '2220-PERIODICIDADE-OUTRAS   ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           IF WS-ICALCIND-ANT EQUAL WS-CON-C
+              MOVE WS-DCRIACAO-ANT  TO WS-DCRIACAO-AUX
+
+              IF WS-DCRIACAO-AUX-ANO NOT EQUAL WS-DATAOPER-ANO OR
+                 WS-DCRIACAO-AUX-MES NOT EQUAL WS-DATAOPER-MES OR
+                 WS-DCRIACAO-AUX-DIA     EQUAL WS-CON-N1
+                 PERFORM 9100-VALIDA-EMISSAO
+                    THRU 9199-VALIDA-EMISSAO-EXIT
+              END-IF
+           END-IF.
+
+           IF WS-CPRODUTO-ANT EQUAL WS-CON-71 AND
+             (WS-CSUBPROD-ANT EQUAL WS-CON-60  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-70  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-80  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-90  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-6B  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-7B  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-8B  OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-9B) AND
+              WS-ICALCIND-ANT EQUAL WS-CON-C
+              MOVE WS-DCRIACAO-ANT  TO WS-DCRIACAO-AUX
+
+              IF WS-DCRIACAO-AUX-ANO NOT EQUAL WS-DATAOPER-ANO OR
+                 WS-DCRIACAO-AUX-MES NOT EQUAL WS-DATAOPER-MES OR
+                 WS-DCRIACAO-AUX-DIA     EQUAL WS-CON-N1
+                 PERFORM 9200-VALIDA-GPE
+                    THRU 9299-VALIDA-GPE-EXIT
+              END-IF
+           END-IF.
+      *
+       2229-PERIODICIDADE-OUTRAS-EXIT.
+           EXIT.
+      ******************************************************************
+      *                  2300-TRATA-CHAVE-IGUAL                        *
+      ******************************************************************
+       2300-TRATA-CHAVE-IGUAL.
+      *
+           MOVE '2300-TRATA-CHAVE-IGUAL  ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE WS-CAMPOS-CORRENTES TO WS-CAMPOS-ANTERIORES.
+
+           ADD WS-MQUOTAAC-ANT TO WS-MQUOTAAC-TOT.
+           SUBTRACT WS-MEXDESCO-ANT FROM WS-MQUOTAAC-TOT.
+           ADD WS-MQTSUPL-ANT  TO WS-MQTSUPL-TOT .
+           ADD WS-MINDEMNI-ANT TO WS-MINDEMNI-TOT.
+      *
+       2399-TRATA-CHAVE-IGUAL-EXIT.
+           EXIT.
+      ******************************************************************
+      *                     2230-EMITE-CARTAS                          *
+      ******************************************************************
+       2230-EMITE-CARTAS.
+      *
+           MOVE '2230-EMITE-CARTAS           ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           INITIALIZE AMCR4011-REGISTO
+               REPLACING ALPHANUMERIC DATA BY SPACES
+                         NUMERIC DATA BY ZEROS.
+
+           MOVE WS-GTITULO-ANT  TO AMCR4011-GTITULO.
+           MOVE WS-ZSOCIO-ANT   TO AMCR4011-ZSOCIO.
+           MOVE WS-CDIGISOC-ANT TO AMCR4011-CDIGISOC.
+           MOVE WS-CTIPSOC-ANT  TO AMCR4011-CTIPSOC.
+           MOVE WS-ZINSCRIC-ANT TO AMCR4011-ZINSCRIC.
+           MOVE WS-CPRODUTO-ANT TO AMCR4011-CPRODUTO.
+           MOVE WS-CBALCAO-ANT  TO AMCR4011-CBALCAO.
+           MOVE WS-CNUMECTA-ANT TO AMCR4011-CNUMECTA.
+           MOVE WS-CDIGICTA-ANT TO AMCR4011-CDIGICTA.
+           MOVE WS-CPRODSAQ-ANT TO AMCR4011-CPRODSAQ.
+           MOVE WS-CBALSAQ-ANT  TO AMCR4011-CBALSAQ.
+           MOVE WS-CCNTSAQ-ANT  TO AMCR4011-CCNTSAQ.
+           MOVE WS-CDIGISAQ-ANT TO AMCR4011-CDIGISAQ.
+           MOVE WS-CSUBPROD-ANT TO AMCR4011-CSUBPROD.
+           MOVE WS-MQUOTAAC-TOT TO AMCR4011-MQUOTAAC.
+           MOVE WS-MQTSUPL-TOT  TO AMCR4011-MQTSUPL.
+      *C82065(I)
+           MOVE WS-CPAISIBSQ-ANT TO AMCR4011-CPAISIBSQ
+           MOVE WS-CBANIBSQ-ANT TO AMCR4011-CBANIBSQ
+           MOVE WS-CCTAIBSQ-ANT TO AMCR4011-CCTAIBSQ
+           MOVE WS-CDIGIBSQ-ANT TO AMCR4011-CDIGIBSQ
+      *C82065(F)
+      *MC-0830-I
+           IF WS-CSUBPROD-ANT EQUAL WS-CON-50 AND
+              WS-MQTSUPL-TOT NOT EQUAL ZEROS
+              MOVE ZEROS        TO AMCR4011-MQTSUPL
+           END-IF
+      *MC-0830-F
+           MOVE WS-MINDEMNI-TOT TO AMCR4011-MINDEMNI.
+
+           MOVE ZEROS           TO AMCR4011-ZCLIBAN
+                                   AMCR4011-ZMORBAN.
+
+           IF WS-CBLTITCL-ANT  EQUAL SPACES
+              MOVE '000'            TO AMCR4011-CBLTITCL
+           ELSE
+              MOVE WS-CBLTITCL-ANT  TO AMCR4011-CBLTITCL
+           END-IF.
+
+           IF CARTA-SUSPENSAO-GPE
+              PERFORM 2232-CARTA-SUSP-GPE
+                 THRU 2232-CARTA-SUSP-GPE-EXIT
+           END-IF.
+
+           IF CARTA-INSUF-SALDO
+              PERFORM 2233-CARTA-INSUF-SALDO
+                 THRU 2233-CARTA-INSUF-SALDO-EXIT
+
+      *MC-0830-I
+      *       PERFORM 2234-OBTER-END-CLIENTE
+      *          THRU 2234-OBTER-END-CLIENTE-EXIT
+      *MC-0830-F
+              PERFORM 9300-WRITE-AMCR4011
+                 THRU 9399-WRITE-AMCR4011-EXIT
+           END-IF.
+
+           IF CARTA-INSUF-SALDO-GPE
+              PERFORM 2235-CARTA-INSUF-SALD-GPE
+                 THRU 2235-CARTA-INSUF-SALD-GPE-EXIT
+
+      *MC-0830-I
+      *       PERFORM 2234-OBTER-END-CLIENTE
+      *          THRU 2234-OBTER-END-CLIENTE-EXIT
+      *MC-0830-F
+              PERFORM 9300-WRITE-AMCR4011
+                 THRU 9399-WRITE-AMCR4011-EXIT
+           END-IF.
+      *
+       2239-EMITE-CARTAS-EXIT.
+           EXIT.
+      ******************************************************************
+      *                     2231-VALIDA-CVIP                           *
+      ******************************************************************
+       2231-VALIDA-CVIP.
+      *
+           MOVE '2231-VALIDA-CVIP         ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE WS-CTIPSOC-ANT   TO AMVT1000-CTIPSOC.
+           MOVE WS-ZSOCIO-ANT    TO AMVT1000-ZSOCIO.
+           MOVE WS-CDIGISOC-ANT  TO AMVT1000-CDIGISOC.
+
+           EXEC SQL
+               SELECT  CVIP,
+                       ZCLIENTE
+                 INTO :AMVT1000-CVIP,
+                      :AMVT1000-ZCLIENTE
+                 FROM  AMVT1000_COMPLASS
+                WHERE  CTIPSOC  = :AMVT1000-CTIPSOC
+                  AND  ZSOCIO   = :AMVT1000-ZSOCIO
+                  AND  CDIGISOC = :AMVT1000-CDIGISOC
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT1000  WS-SQLCODE.
+           IF AMVT1000-OK
+              IF AMVT1000-CVIP EQUAL WS-CON-1   OR
+                 AMVT1000-CVIP EQUAL WS-CON-S
+                 MOVE WS-CON-S TO SW-CARTA-ASSOCIACAO
+              END-IF
+           ELSE
+              IF NOT AMVT1000-NOTFND
+                 DISPLAY MSG-SELECT-AMVT1000  WS-SQLCODE
+                 DISPLAY 'CTIPSOC  = ' AMVT1000-CTIPSOC
+                 DISPLAY 'ZSOCIO   = ' AMVT1000-ZSOCIO
+                 DISPLAY 'CDIGISOC = ' AMVT1000-CDIGISOC
+                 PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+              END-IF
+           END-IF.
+      *
+       2231-VALIDA-CVIP-EXIT.
+           EXIT.
+      ******************************************************************
+      *                     2232-CARTA-SUSP-GPE                        *
+      ******************************************************************
+       2232-CARTA-SUSP-GPE.
+      *
+           MOVE '2232-CARTA-SUSP-GPE        ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           IF  WS-AMT22-CPRODEMP NOT EQUAL SPACES
+           AND WS-AMT22-CBALCEMP NOT EQUAL SPACES
+           AND WS-AMT22-CNUMEMP  NOT EQUAL SPACES
+           AND WS-AMT22-CDIGIEMP NOT EQUAL SPACES
+              MOVE '0036 '              TO WS-AMT22-CBANCO
+           END-IF
+
+           MOVE WS-AMT22-CBANCO         TO AMCR4011-CBANCO
+           MOVE WS-AMT22-QVIDA          TO WS-QVIDA-AUX
+           MOVE WS-QVIDA-AUX            TO AMCR4011-CNUMVIDA
+           MOVE WS-AMT22-CBALCEMP       TO AMCR4011-ZEMPREST(1:3)
+           MOVE WS-AMT22-CPRODEMP       TO AMCR4011-ZEMPREST(4:2)
+           MOVE WS-AMT22-CNUMEMP        TO AMCR4011-ZEMPREST(6:6)
+           MOVE WS-AMT22-CDIGIEMP       TO AMCR4011-ZEMPREST(12:1)
+           MOVE WS-AMT22-ZEMPOIC        TO AMCR4011-ZEMPOIC
+
+           MOVE WS-CON-N1               TO AMCR4011-CDECARTA
+           MOVE ZEROS                   TO AMCR4011-CTICARTA
+           MOVE ZEROS                   TO AMCR4011-GNOCARTA
+                                           AMCR4011-NMORADA
+                                           AMCR4011-GCOMPDOM
+                                           AMCR4011-NLOCALID
+                                           AMCR4011-CPOSTAL
+                                           AMCR4011-GCPOSTAL.
+           PERFORM 5000-VERIFICA-CLIBAN
+              THRU 5099-VERIFICA-CLIBAN-EXIT.
+           MOVE WS-ZCLIBAN             TO  AMCR4011-ZCLIBAN.
+      *ALT01(I)
+           IF GMVT1000-OK
+              PERFORM 5010-MORADA-CLIBAN
+                 THRU 5010-MORADA-CLIBAN-EXIT
+           ELSE
+              MOVE ZEROS              TO WS-ZMORBAN
+           END-IF.
+      *ALT01(F)
+           MOVE WS-ZMORBAN             TO  AMCR4011-ZMORBAN.
+           PERFORM 9300-WRITE-AMCR4011
+              THRU 9399-WRITE-AMCR4011-EXIT.
+
+           IF DIV-QA-JOIA-NAO-INCLUIDA
+              MOVE WS-CTIPSOC-ANT  TO WS-CTIPSOC-AUX
+              MOVE WS-ZSOCIO-ANT   TO WS-ZSOCIO-AUX
+              MOVE WS-CDIGISOC-ANT TO WS-CDIGISOC-AUX
+              MOVE WS-CON-70       TO WS-CPRODUTO-AUX
+              MOVE WS-CON-50       TO WS-CSUBPROD-AUX
+              PERFORM 22321-TRATA-QA-JOIA
+                 THRU 22321-TRATA-QA-JOIA-EXIT
+
+              MOVE WS-CTIPSOC-ANT  TO WS-CTIPSOC-AUX
+              MOVE WS-ZSOCIO-ANT   TO WS-ZSOCIO-AUX
+              MOVE WS-CDIGISOC-ANT TO WS-CDIGISOC-AUX
+              MOVE WS-CON-70       TO WS-CPRODUTO-AUX
+              MOVE WS-CON-40       TO WS-CSUBPROD-AUX
+              PERFORM 22321-TRATA-QA-JOIA
+                 THRU 22321-TRATA-QA-JOIA-EXIT
+
+              MOVE WS-CON-S TO SW-DIV-QA-JOIA-INCLUIDA
+           END-IF.
+      *
+       2232-CARTA-SUSP-GPE-EXIT.
+           EXIT.
+      ******************************************************************
+      *                      22321-TRATA-QA-JOIA                       *
+      ******************************************************************
+       22321-TRATA-QA-JOIA.
+      *
+           MOVE '22321-TRATA-QA-JOIA       ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           PERFORM 223211-SELECT-AMT60
+              THRU 223211-SELECT-AMT60-EXIT.
+
+           IF WS-MQUOTAAC-AUX NOT EQUAL ZEROS
+              PERFORM 223212-SELECT-AMT01
+                 THRU 223212-SELECT-AMT01-EXIT
+
+              IF WS-CESTADO-AUX EQUAL WS-CON-01 OR
+                 WS-CESTADO-AUX EQUAL WS-CON-07 OR
+                 WS-CESTADO-AUX EQUAL WS-CON-08 OR
+                 WS-CESTADO-AUX EQUAL WS-CON-02
+
+                 IF WS-CSITSUB-AUX NOT EQUAL WS-CON-07
+
+                    MOVE WS-ZINSCRIC-AUX TO AMCR4011-ZINSCRIC
+                    MOVE WS-CPRODUTO-AUX TO AMCR4011-CPRODUTO
+                    MOVE WS-CBALCAO-AUX  TO AMCR4011-CBALCAO
+                    MOVE WS-CNUMECTA-AUX TO AMCR4011-CNUMECTA
+                    MOVE WS-CDIGICTA-AUX TO AMCR4011-CDIGICTA
+                    MOVE WS-CPRODSAQ-AUX TO AMCR4011-CPRODSAQ
+                    MOVE WS-CBALSAQ-AUX  TO AMCR4011-CBALSAQ
+                    MOVE WS-CCNTSAQ-AUX  TO AMCR4011-CCNTSAQ
+                    MOVE WS-CDIGISAQ-AUX TO AMCR4011-CDIGISAQ
+                    MOVE WS-CSUBPROD-AUX TO AMCR4011-CSUBPROD
+                    MOVE WS-MQUOTAAC-AUX TO AMCR4011-MQUOTAAC
+                    MOVE WS-MQTSUPL-AUX  TO AMCR4011-MQTSUPL
+      *C82065(I)
+                    MOVE WS-CPAISIBSQ-AUX TO AMCR4011-CPAISIBSQ
+                    MOVE WS-CBANIBSQ-AUX TO AMCR4011-CBANIBSQ
+                    MOVE WS-CCTAIBSQ-AUX TO AMCR4011-CCTAIBSQ
+                    MOVE WS-CDIGIBSQ-AUX TO AMCR4011-CDIGIBSQ
+      *C82065(F)
+      *MC-0830-I
+                    IF WS-CSUBPROD-AUX EQUAL WS-CON-50 AND
+                       WS-MQTSUPL-AUX NOT EQUAL ZEROS
+                       MOVE ZEROS        TO AMCR4011-MQTSUPL
+                    END-IF
+      *MC-0830-F
+                    MOVE WS-MINDEMNI-AUX TO AMCR4011-MINDEMNI
+                    PERFORM 9300-WRITE-AMCR4011
+                       THRU 9399-WRITE-AMCR4011-EXIT
+                  END-IF
+               END-IF
+            END-IF.
+      *
+       22321-TRATA-QA-JOIA-EXIT.
+           EXIT.
+      *****************************************************************
+      *                       223211-SELECT-AMT60
+      *****************************************************************
+       223211-SELECT-AMT60.
+      *
+           MOVE '223211-SELECT-AMT60' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                SELECT  SUM(MQUOTAAC),
+                        SUM(MQTSUPL),
+                        SUM(MINDEMNI)
+                  INTO :WS-MQUOTAAC-AUX :COD-RETORNO1,
+                       :WS-MQTSUPL-AUX  :COD-RETORNO2,
+                       :WS-MINDEMNI-AUX :COD-RETORNO3
+                  FROM  AMVT6002_QUOTVENC
+                 WHERE  CTIPSOC   = :WS-CTIPSOC-AUX
+                   AND  ZSOCIO    = :WS-ZSOCIO-AUX
+                   AND  CDIGISOC  = :WS-CDIGISOC-AUX
+                   AND  CPRODUTO  = :WS-CPRODUTO-AUX
+                   AND  CSUBPROD  = :WS-CSUBPROD-AUX
+      *MC-0830-I
+      *            AND  ICOBRADO <> 'S'
+      *            AND  ICOBRADO <> 'E'
+      *            AND  ICOBRADO <> 'R'
+      *            AND  ICOBRADO <> 'A'
+      *            AND  ICOBRADO <> 'G'
+      * C82065_R2(I)
+      **           AND ICOBRADO = 'N'
+      *            AND ( ICOBRADO = :AMCK0002-CON-ICOBRADO-NAOCOBR
+      *             OR ( ICOBRADO = :AMCK0002-CON-ICOBRADO-COBREXT
+      *              AND CSITCOBR = :AMCK0002-CON-CSITCOBR-REJCLI ))
+      *
+                   AND (
+                       (ICOBRADO = :AMCK0002-CON-ICOBRADO-NAOCOBR
+                   AND  CSITCOBR <>:AMCK0002-CON-CSITCOBR-EFETUAD)
+
+                    OR (ICOBRADO = :AMCK0002-CON-ICOBRADO-COBREXT
+                   AND  CSITCOBR = :AMCK0002-CON-CSITCOBR-REJCLI)
+
+                    OR (ICOBRADO = :AMCK0002-CON-ICOBRADO-COBREXT
+                   AND  CSITCOBR = :AMCK0002-CON-CSITCOBR-REJBANC)
+
+                    OR (ICOBRADO = :AMCK0002-CON-ICOBRADO-COBREXT
+                   AND  CSITCOBR = :AMCK0002-CON-CSITCOBR-CRIADA)
+                       )
+      *C82065_R2(F)
+
+      *MC-0830-F
+                   AND  CCNTSAQ  <> '      '
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT6002  WS-SQLCODE.
+           IF AMVT6002-OK
+              IF COD-RETORNO1 LESS ZEROS OR
+                 COD-RETORNO2 LESS ZEROS OR
+                 COD-RETORNO3 LESS ZEROS
+                 MOVE ZEROS        TO WS-MQUOTAAC-AUX
+                 MOVE ZEROS        TO WS-MQTSUPL-AUX
+                 MOVE ZEROS        TO WS-MINDEMNI-AUX
+              END-IF
+           ELSE
+              DISPLAY MSG-SELECT-AMVT6002  WS-SQLCODE
+              DISPLAY 'CTIPSOC  :' WS-CTIPSOC-AUX
+              DISPLAY 'ZSOCIO   :' WS-ZSOCIO-AUX
+              DISPLAY 'CDIGISOC :' WS-CDIGISOC-AUX
+              DISPLAY 'CPRODUTO :' WS-CPRODUTO-AUX
+              DISPLAY 'CSUBPROD :' WS-CSUBPROD-AUX
+      *MC-0830-I
+      *       DISPLAY 'ICOBRADO <> S'
+      *       DISPLAY 'ICOBRADO <> E'
+      *       DISPLAY 'ICOBRADO <> R'
+      *       DISPLAY 'ICOBRADO <> A'
+      *       DISPLAY 'ICOBRADO <> G'
+      *       DISPLAY 'ICOBRADO  = N'
+      *MC-0830-F
+              DISPLAY 'CCNTSAQ  <>       '
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       223211-SELECT-AMT60-EXIT.
+           EXIT.
+      *****************************************************************
+      *                       223212-SELECT-AMT01
+      *****************************************************************
+       223212-SELECT-AMT01.
+      *
+           MOVE '223212-SELECT-AMT01' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                   SELECT  CPRODUTO ,
+                           CBALCAO  ,
+                           CNUMECTA ,
+                           CDIGICTA ,
+                           CSUBPROD ,
+                           ZINSCRIC ,
+                           CSITSUB  ,
+                           CESTADO  ,
+                           CBALSAQ  ,
+                           CPRODSAQ ,
+                           CCNTSAQ  ,
+                           CDIGISAQ ,
+      *C82065(I)
+                           CPAISIBSQ ,
+                           CBANIBSQ ,
+                           CCTAIBSQ ,
+                           CDIGIBSQ
+      *C82065(F)
+                     INTO :WS-CPRODUTO-AUX ,
+                          :WS-CBALCAO-AUX  ,
+                          :WS-CNUMECTA-AUX ,
+                          :WS-CDIGICTA-AUX ,
+                          :WS-CSUBPROD-AUX ,
+                          :WS-ZINSCRIC-AUX ,
+                          :WS-CSITSUB-AUX  ,
+                          :WS-CESTADO-AUX  ,
+                          :WS-CBALSAQ-AUX  ,
+                          :WS-CPRODSAQ-AUX ,
+                          :WS-CCNTSAQ-AUX  ,
+                          :WS-CDIGISAQ-AUX ,
+      *C82065(I)
+                          :WS-CPAISIBSQ-AUX,
+                          :WS-CBANIBSQ-AUX ,
+                          :WS-CCTAIBSQ-AUX ,
+                          :WS-CDIGIBSQ-AUX
+      *C82065(F)
+                     FROM AMVT0113_BASIOPER
+                    WHERE CTIPSOC  = :WS-CTIPSOC-AUX
+                      AND ZSOCIO   = :WS-ZSOCIO-AUX
+                      AND CDIGISOC = :WS-CDIGISOC-AUX
+                      AND CPRODUTO = :WS-CPRODUTO-AUX
+                      AND CSUBPROD = :WS-CSUBPROD-AUX
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT0113  WS-SQLCODE.
+           IF NOT AMVT0113-OK
+              DISPLAY MSG-SELECT-AMVT0113  WS-SQLCODE
+              DISPLAY 'CTIPSOC  = ' WS-CTIPSOC-AUX
+              DISPLAY 'ZSOCIO   = ' WS-ZSOCIO-AUX
+              DISPLAY 'CDIGISOC = ' WS-CDIGISOC-AUX
+              DISPLAY 'CPRODUTO = ' WS-CPRODUTO-AUX
+              DISPLAY 'CSUBPROD = ' WS-CSUBPROD-AUX
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       223212-SELECT-AMT01-EXIT.
+           EXIT.
+      ******************************************************************
+      *                     2233-CARTA-INSUF-SALDO                     *
+      ******************************************************************
+       2233-CARTA-INSUF-SALDO.
+      *
+           MOVE '2233-CARTA-INSUF-SALDO        ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE WS-CON-001   TO AMCR4011-CTICARTA.
+
+           IF CARTA-ASSOCIACAO
+              MOVE WS-CON-N1 TO AMCR4011-CDECARTA
+           ELSE
+              MOVE ZEROS    TO AMCR4011-CDECARTA
+           END-IF.
+      *
+       2233-CARTA-INSUF-SALDO-EXIT.
+           EXIT.
+      ******************************************************************
+      *                   2234-OBTER-END-CLIENTE                       *
+      ******************************************************************
+      *2234-OBTER-END-CLIENTE.
+      *
+      *    MOVE '2234-OBTER-END-CLIENTE      ' TO ABEND-CALLER-ID.
+      *    IF SW-DEBUG-SIM
+      *       DISPLAY ABEND-CALLER-ID
+      *    END-IF.
+      *
+      *    MOVE WS-ZCLIENTE-ANT TO WS-ZCLIENTE-AUX.
+      *
+      *    IF WS-ZCLIENTE-ANT EQUAL ZERO
+      *       MOVE AMVT1000-ZCLIENTE TO WS-ZCLIENTE-AUX
+      *    END-IF.
+      *
+      *    INITIALIZE AMCB1009-AREA
+      *    REPLACING ALPHANUMERIC DATA BY SPACES
+      *              NUMERIC DATA BY ZEROS
+      *
+      *    MOVE WS-CTIPSOC-ANT  TO AMCB1009-CTIPSOC
+      *    MOVE WS-ZSOCIO-ANT   TO AMCB1009-ZSOCIO
+      *    MOVE WS-CDIGISOC-ANT TO AMCB1009-CDIGISOC
+      *    MOVE WS-ZCLIENTE-AUX TO AMCB1009-ZCLIENTE
+      *    MOVE '00'            TO AMCB1009-ERRO
+      *
+      *    PERFORM AMCC1009-ROTINA
+      *       THRU AMCC1009-EXIT.
+      *
+      *    IF NOT AMCB1009-OK
+      *       MOVE 'AMB04020' TO WS-PROGRAMA
+      *       PERFORM 2222-GRAVA-AMCR1009
+      *          THRU 2222-GRAVA-AMCR1009-EXIT
+      *    END-IF.
+      *
+      *    PERFORM 22342-FORMATA-ENDERECO
+      *       THRU 22342-FORMATA-ENDERECO-EXIT.
+      *
+      *2234-OBTER-END-CLIENTE-EXIT.
+      *    EXIT.
+      ******************************************************************
+      *                      22341-ACEDE-AMT10                         *
+      ******************************************************************
+      *22341-ACEDE-AMT10.
+      *
+      *    MOVE '22341-ACEDE-AMT10           ' TO ABEND-CALLER-ID.
+      *    IF SW-DEBUG-SIM
+      *       DISPLAY ABEND-CALLER-ID
+      *    END-IF.
+      *
+      *    MOVE WS-CTIPSOC-ANT        TO AMVT1000-CTIPSOC.
+      *    MOVE WS-ZSOCIO-ANT         TO AMVT1000-ZSOCIO.
+      *    MOVE WS-CDIGISOC-ANT       TO AMVT1000-CDIGISOC.
+      *
+      *    EXEC SQL
+      *        SELECT  ZCLIENTE
+      *          INTO :AMVT1000-ZCLIENTE
+      *          FROM  AMVT1000_COMPLASS
+      *         WHERE  CTIPSOC  = :AMVT1000-CTIPSOC
+      *           AND  ZSOCIO   = :AMVT1000-ZSOCIO
+      *           AND  CDIGISOC = :AMVT1000-CDIGISOC
+      *    END-EXEC
+      *
+      *    MOVE SQLCODE  TO  STATUS-AMVT1000  WS-SQLCODE.
+      *    IF AMVT1000-OK
+      *       MOVE AMVT1000-ZCLIENTE TO WS-ZCLIENTE-AUX
+      *    ELSE
+      *       DISPLAY MSG-SELECT-AMVT1000  WS-SQLCODE
+      *       DISPLAY 'CTIPSOC  = ' AMVT1000-CTIPSOC
+      *       DISPLAY 'ZSOCIO   = ' AMVT1000-ZSOCIO
+      *       DISPLAY 'CDIGISOC = ' AMVT1000-CDIGISOC
+      *       PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+      *    END-IF.
+      *
+      *22341-ACEDE-AMT10-EXIT.
+      *    EXIT.
+      ******************************************************************
+      *                     22342-FORMATA-ENDERECO                     *
+      ******************************************************************
+      *22342-FORMATA-ENDERECO.
+      *
+      *    MOVE '22342-FORMATA-ENDERECO    ' TO ABEND-CALLER-ID.
+      *    IF SW-DEBUG-SIM
+      *       DISPLAY ABEND-CALLER-ID
+      *    END-IF.
+      *
+      *    MOVE AMCB1009-GNOCARTA  TO  AMCR4011-GNOCARTA.
+      *    MOVE AMCB1009-NMORADA   TO  AMCR4011-NMORADA.
+      *    MOVE AMCB1009-GCOMPDOM  TO  AMCR4011-GCOMPDOM.
+      *    MOVE AMCB1009-NLOCALID  TO  AMCR4011-NLOCALID.
+      *    MOVE AMCB1009-GCPOSTAL  TO  AMCR4011-GCPOSTAL.
+      *    MOVE AMCB1009-CPOSTAL   TO  AMCR4011-CPOSTAL.
+      *
+      *22342-FORMATA-ENDERECO-EXIT.
+      *    EXIT.
+      ******************************************************************
+      *                   2235-CARTA-INSUF-SALD-GPE                    *
+      ******************************************************************
+       2235-CARTA-INSUF-SALD-GPE.
+      *
+           MOVE '2235-CARTA-INSUF-SALD-GPE' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE WS-CON-001   TO AMCR4011-CTICARTA.
+
+           IF CARTA-ASSOCIACAO
+              MOVE WS-CON-N1 TO AMCR4011-CDECARTA
+           ELSE
+              MOVE ZEROS    TO AMCR4011-CDECARTA
+           END-IF.
+      *
+       2235-CARTA-INSUF-SALD-GPE-EXIT.
+           EXIT.
+      ******************************************************************
+      *               3000-REPOE-ICALCIND                              *
+      ******************************************************************
+       3000-REPOE-ICALCIND.
+      *
+           MOVE '3000-REPOE-ICALCIND      ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                 UPDATE AMVT6002_QUOTVENC
+                    SET ICALCIND = 'S'
+                  WHERE CTIPSOC  = :WS-CTIPSOC-ANT
+                    AND ZSOCIO   = :WS-ZSOCIO-ANT
+                    AND CDIGISOC = :WS-CDIGISOC-ANT
+                    AND ZINSCRIC = :WS-ZINSCRIC-ANT
+                    AND CPRODUTO = :WS-CPRODUTO-ANT
+                    AND CSUBPROD = :WS-CSUBPROD-ANT
+                    AND ICALCIND = 'C'
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT6002  WS-SQLCODE.
+           IF NOT AMVT6002-OK AND NOT AMVT6002-NOTFND
+              DISPLAY MSG-UPDATE-AMVT6002  WS-SQLCODE
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+      *20181221
+           IF AMVT6002-OK
+              ADD 1 TO WS-COUNT-UPD
+              DISPLAY 'REG ALTERADO = ' WS-COUNT-UPD
+           END-IF.
+      *
+       3999-REPOE-ICALCIND-EXIT.
+            EXIT.
+      ******************************************************************
+      *               4000-FIM-PROGRAMA                                *
+      ******************************************************************
+       4000-FIM-PROGRAMA.
+      *
+           MOVE '4000-FIM-PROGRAMA        ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           PERFORM 3333-CLOSE-AMCR1009
+              THRU 3333-CLOSE-AMCR1009-EXIT.
+
+           PERFORM 4100-CLOSE-CURSOR
+              THRU 4199-CLOSE-CURSOR-EXIT.
+
+           PERFORM 4200-CLOSE-AMCR4011
+              THRU 4299-CLOSE-AMCR4011-EXIT.
+
+           PERFORM 4300-CLOSE-AMCR4650
+              THRU 4399-CLOSE-AMCR4650-EXIT.
+      *
+       4999-FIM-PROGRAMA-EXIT.
+            EXIT.
+      ******************************************************************
+      *                  4100-CLOSE-CURSOR                             *
+      ******************************************************************
+       4100-CLOSE-CURSOR.
+      *
+           MOVE '4100-CLOSE-CURSOR        ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                CLOSE CRS-QUOTVENC
+           END-EXEC.
+
+           MOVE SQLCODE TO STATUS-AMVT6002 WS-SQLCODE.
+           IF NOT AMVT6002-OK
+              DISPLAY MSG-CLOSE-AMVT6002 WS-SQLCODE
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       4199-CLOSE-CURSOR-EXIT.
+           EXIT.
+      ******************************************************************
+      *               4200-CLOSE-AMCR4011                              *
+      ******************************************************************
+       4200-CLOSE-AMCR4011.
+      *
+           MOVE '4200-CLOSE-AMCR4011      ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           CLOSE AMCR4011.
+
+           IF NOT AMCR4011-OK
+              DISPLAY MSG-CLOSE-AMCR4011 STATUS-AMCR4011
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       4299-CLOSE-AMCR4011-EXIT.
+           EXIT.
+      ******************************************************************
+      *               4300-CLOSE-AMCR4650                              *
+      ******************************************************************
+       4300-CLOSE-AMCR4650.
+      *
+           MOVE '4300-CLOSE-AMCR4650      ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+               DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           CLOSE AMCR4650.
+
+           IF NOT INPUT-OK
+              DISPLAY MSG-CLOSE-INPUT STATUS-INPUT
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       4399-CLOSE-AMCR4650-EXIT.
+           EXIT.
+      ******************************************************************
+      *                     5000-VERIFICA-CLIBAN                       *
+      ******************************************************************
+       5000-VERIFICA-CLIBAN.
+      *
+           MOVE WS-AMT22-CBANCO          TO GMVT1000-CDOCID3.
+      *
+           EXEC SQL
+                SELECT ZCLIENTE
+      *ALT01(I)
+      *                ZMORADA
+      *ALT01(F)
+                  INTO :WS-ZCLIBAN
+      *ALT01(I)
+      *                :WS-ZMORBAN
+      *ALT01(F)
+                  FROM GMVT1000_BASICOS
+                 WHERE CTIPDOC3 = '802'
+                   AND CDOCID3  = :GMVT1000-CDOCID3
+                  WITH UR
+           END-EXEC.
+      *
+           MOVE SQLCODE TO  STATUS-GMVT1000  WS-SQLCODE.
+           IF GMVT1000-NOTFND
+              MOVE ZEROS            TO WS-ZCLIBAN
+      *ALT01(I)
+      *                                WS-ZMORBAN
+      *ALT01(F)
+           ELSE
+              IF NOT GMVT1000-OK
+                 DISPLAY 'GMVT1000-CDOCID3 ' GMVT1000-CDOCID3
+                 DISPLAY 'WS-SQLCODE = ' WS-SQLCODE
+                 PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+              END-IF
+           END-IF.
+      *
+       5099-VERIFICA-CLIBAN-EXIT.
+           EXIT.
+      *ALT02(I)
+      ******************************************************************
+      *                     5010-MORADA-CLIBAN                         *
+      ******************************************************************
+       5010-MORADA-CLIBAN.
+      *
+           MOVE WS-ZCLIBAN               TO GMVT0500-ZCLIENTE.
+      *
+           EXEC SQL
+                SELECT ZMORADA
+                  INTO :WS-ZMORBAN
+                  FROM GMVT0500_MORADAS
+                 WHERE ZCLIENTE = :GMVT0500-ZCLIENTE
+                   AND CMORADA  = '00'
+                   AND IANULADA <> 'S'
+                  WITH UR
+           END-EXEC.
+      *
+           MOVE SQLCODE TO  STATUS-GMVT0500  WS-SQLCODE.
+           IF GMVT0500-NOTFND
+              MOVE ZEROS                 TO WS-ZMORBAN
+           ELSE
+              IF NOT GMVT0500-OK
+                 DISPLAY 'GMVT0500-ZCLIENTE ' GMVT0500-ZCLIENTE
+                 DISPLAY 'WS-SQLCODE = ' WS-SQLCODE
+                 PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+              END-IF
+           END-IF.
+      *
+       5010-MORADA-CLIBAN-EXIT.
+           EXIT.
+      *ALT02(F)
+      ******************************************************************
+      *                  9000-FETCH-CURSOR                             *
+      ******************************************************************
+       9000-FETCH-CURSOR.
+      *
+           MOVE '9000-FETCH-CURSOR        ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+              FETCH CRS-QUOTVENC
+               INTO :AMVT6002-CTIPSOC ,
+                    :AMVT6002-ZSOCIO  ,
+                    :AMVT6002-CDIGISOC,
+                    :AMVT6002-ZINSCRIC,
+                    :AMVT6002-CSUBPROD,
+                    :AMVT6002-DQUOTA  ,
+                    :AMVT6002-ICALCIND,
+                    :AMVT6002-CPRODUTO,
+                    :AMVT6002-CBALCAO ,
+                    :AMVT6002-CNUMECTA,
+                    :AMVT6002-CDIGICTA,
+                    :AMVT6002-MEXDESCO,
+                    :AMVT6002-CBALSAQ ,
+                    :AMVT6002-CPRODSAQ,
+                    :AMVT6002-CCNTSAQ ,
+                    :AMVT6002-CDIGISAQ,
+                    :AMVT6002-ZCLIENTE,
+                    :AMVT6002-ZMORADA ,
+                    :AMVT6002-CENDALT ,
+                    :AMVT6002-CODPER  ,
+                    :AMVT6002-MQTSUPL ,
+                    :AMVT6002-MQUOTAAC,
+                    :AMVT6002-MINDEMNI,
+                    :AMVT6002-DCRIACAO
+           END-EXEC.
+
+           MOVE SQLCODE TO  STATUS-AMVT6002  WS-SQLCODE.
+           IF NOT AMVT6002-OK AND NOT AMVT6002-NOTFND
+              DISPLAY MSG-FETCH-AMVT6002 WS-SQLCODE
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           ELSE
+              IF AMVT6002-OK
+                 IF WS-CTIPSOC  NOT EQUAL AMVT6002-CTIPSOC  OR
+                    WS-ZSOCIO   NOT EQUAL AMVT6002-ZSOCIO   OR
+                    WS-CDIGISOC NOT EQUAL AMVT6002-CDIGISOC OR
+                    WS-ZINSCRIC NOT EQUAL AMVT6002-ZINSCRIC OR
+                    WS-CPRODUTO NOT EQUAL AMVT6002-CPRODUTO OR
+                    WS-CSUBPROD NOT EQUAL AMVT6002-CSUBPROD
+                    PERFORM 9010-BUSCA-AMT01
+                       THRU 9019-BUSCA-AMT01-EXIT
+
+                    MOVE AMVT0113-CBALSAQ  TO WS-CBALSAQ
+                    MOVE AMVT0113-CPRODSAQ TO WS-CPRODSAQ
+                    MOVE AMVT0113-CCNTSAQ  TO WS-CCNTSAQ
+                    MOVE AMVT0113-CDIGISAQ TO WS-CDIGISAQ
+      *C82065(I)
+                    MOVE AMVT0113-CPAISIBSQ TO WS-CPAISIBSQ
+                    MOVE AMVT0113-CBANIBSQ TO WS-CBANIBSQ
+                    MOVE AMVT0113-CCTAIBSQ TO WS-CCTAIBSQ
+                    MOVE AMVT0113-CDIGIBSQ TO WS-CDIGIBSQ
+      *C82065(F)
+                 END-IF
+
+                 MOVE AMVT6002-CTIPSOC  TO WS-CTIPSOC
+                 MOVE AMVT6002-ZSOCIO   TO WS-ZSOCIO
+                 MOVE AMVT6002-CDIGISOC TO WS-CDIGISOC
+                 MOVE AMVT6002-ZINSCRIC TO WS-ZINSCRIC
+                 MOVE AMVT6002-CSUBPROD TO WS-CSUBPROD
+                 MOVE AMVT6002-DQUOTA   TO WS-DQUOTA
+                 MOVE AMVT6002-ICALCIND TO WS-ICALCIND
+                 MOVE AMVT6002-CPRODUTO TO WS-CPRODUTO
+                 MOVE AMVT6002-CBALCAO  TO WS-CBALCAO
+                 MOVE AMVT6002-CNUMECTA TO WS-CNUMECTA
+                 MOVE AMVT6002-CDIGICTA TO WS-CDIGICTA
+
+                 PERFORM 9700-SELECT-AMT10
+                    THRU 9799-SELECT-AMT10-EXIT
+
+                 MOVE GMVT1000-NOMER    TO WS-GTITULO
+
+                 MOVE GMVT1000-CBLTITCL TO WS-CBLTITCL
+
+                 MOVE AMVT6002-MEXDESCO TO WS-MEXDESCO
+                 MOVE AMVT6002-ZCLIENTE TO WS-ZCLIENTE
+                 MOVE AMVT6002-ZMORADA  TO WS-ZMORADA
+                 MOVE SPACES            TO WS-CENDALT
+                 MOVE AMVT6002-CODPER   TO WS-CODPER
+                 MOVE AMVT6002-MQTSUPL  TO WS-MQTSUPL
+                 MOVE AMVT6002-MQUOTAAC TO WS-MQUOTAAC
+                 MOVE AMVT6002-MINDEMNI TO WS-MINDEMNI
+                 MOVE AMVT6002-DCRIACAO TO WS-DCRIACAO
+              END-IF
+           END-IF.
+      *
+       9099-FETCH-CURSOR-EXIT.
+           EXIT.
+      *****************************************************************
+      *               9010-BUSCA-AMT01
+      *****************************************************************
+       9010-BUSCA-AMT01.
+      *
+           MOVE '9010-BUSCA-AMT01'   TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                   SELECT  CSITSUB  ,
+                           CESTADO  ,
+                           CBALSAQ  ,
+                           CPRODSAQ ,
+                           CCNTSAQ  ,
+                           CDIGISAQ ,
+      *C82065(I)
+                           CPAISIBSQ,
+                           CBANIBSQ ,
+                           CCTAIBSQ ,
+                           CDIGIBSQ
+      *C82065(F)
+                     INTO :AMVT0113-CSITSUB  ,
+                          :AMVT0113-CESTADO  ,
+                          :AMVT0113-CBALSAQ  ,
+                          :AMVT0113-CPRODSAQ ,
+                          :AMVT0113-CCNTSAQ  ,
+                          :AMVT0113-CDIGISAQ ,
+      *C82065(I)
+                          :AMVT0113-CPAISIBSQ,
+                          :AMVT0113-CBANIBSQ ,
+                          :AMVT0113-CCTAIBSQ ,
+                          :AMVT0113-CDIGIBSQ
+      *C82065(F)
+                     FROM  AMVT0113_BASIOPER
+                    WHERE  CPRODUTO = :AMVT6002-CPRODUTO
+                      AND  CBALCAO  = :AMVT6002-CBALCAO
+                      AND  CNUMECTA = :AMVT6002-CNUMECTA
+                      AND  CDIGICTA = :AMVT6002-CDIGICTA
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT0113  WS-SQLCODE.
+           IF NOT AMVT0113-OK
+              DISPLAY MSG-SELECT-AMVT0113  WS-SQLCODE
+              DISPLAY 'CPRODUTO = ' AMVT6002-CPRODUTO
+              DISPLAY 'CBALCAO  = ' AMVT6002-CBALCAO
+              DISPLAY 'CNUMECTA = ' AMVT6002-CNUMECTA
+              DISPLAY 'CDIGICTA = ' AMVT6002-CDIGICTA
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9019-BUSCA-AMT01-EXIT.
+           EXIT.
+      ******************************************************************
+      *                    9100-VALIDA-EMISSAO                         *
+      ******************************************************************
+       9100-VALIDA-EMISSAO.
+      *
+           MOVE '9100-VALIDA-EMISSAO     ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           IF WS-CSUBPROD-ANT EQUAL WS-CON-40 OR
+              WS-CSUBPROD-ANT EQUAL WS-CON-50
+
+              MOVE WS-CON-N  TO SWITCH-GPE-VALIDA
+
+              PERFORM 9500-VALIDA-GPE-LISBOR
+                 THRU 9599-VALIDA-GPE-LISBOR-EXIT
+
+              IF SW-GPE-NAO-VALIDA
+                 PERFORM 9110-VALIDA-QA
+                    THRU 9119-VALIDA-QA-EXIT
+              END-IF
+           ELSE
+              IF WS-CPRODUTO-ANT EQUAL WS-CON-71 AND
+                (WS-CSUBPROD-ANT EQUAL WS-CON-60 OR
+                 WS-CSUBPROD-ANT EQUAL WS-CON-70 OR
+                 WS-CSUBPROD-ANT EQUAL WS-CON-80 OR
+                 WS-CSUBPROD-ANT EQUAL WS-CON-90 OR
+                 WS-CSUBPROD-ANT EQUAL WS-CON-6B OR
+                 WS-CSUBPROD-ANT EQUAL WS-CON-7B OR
+                 WS-CSUBPROD-ANT EQUAL WS-CON-8B OR
+                 WS-CSUBPROD-ANT EQUAL WS-CON-9B)
+                 PERFORM 9120-VALIDA-GPE
+                    THRU 9129-VALIDA-GPE-EXIT
+              ELSE
+                 MOVE WS-CON-S TO SW-CARTA-INSUF-SALDO
+              END-IF
+           END-IF.
+      *
+       9199-VALIDA-EMISSAO-EXIT.
+           EXIT.
+      ******************************************************************
+      *                      9110-VALIDA-QA                            *
+      ******************************************************************
+       9110-VALIDA-QA.
+      *
+           MOVE '9110-VALIDA-QA             ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE ZEROS TO WS-MSALDO
+                         WS-COUNT.
+
+           PERFORM 9111-COUNT-BASIOPER
+              THRU 9111-COUNT-BASIOPER-EXIT.
+
+           IF WS-COUNT LESS WS-CON-N1
+              PERFORM 9112-SUM-BASIOPER
+                 THRU 9112-SUM-BASIOPER-EXIT
+           END-IF.
+
+           IF WS-MSALDO GREATER ZEROS
+              PERFORM 9113-VALIDA-MINIMO-CREF
+                 THRU 9113-VALIDA-MINIMO-CREF-EXIT
+           END-IF.
+      *
+       9119-VALIDA-QA-EXIT.
+           EXIT.
+      ******************************************************************
+      *                     9111-COUNT-BASIOPER                        *
+      ******************************************************************
+       9111-COUNT-BASIOPER.
+      *
+           MOVE '9111-COUNT-BASIOPER        ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE WS-CTIPSOC-ANT  TO AMVT0113-CTIPSOC.
+           MOVE WS-ZSOCIO-ANT   TO AMVT0113-ZSOCIO.
+           MOVE WS-CDIGISOC-ANT TO AMVT0113-CDIGISOC.
+           MOVE ZEROS           TO WS-COUNT.
+
+           EXEC SQL
+                SELECT  COUNT(*)
+                  INTO :WS-COUNT
+                  FROM  AMVT0113_BASIOPER
+                 WHERE  CTIPSOC   = :AMVT0113-CTIPSOC
+                   AND  ZSOCIO    = :AMVT0113-ZSOCIO
+                   AND  CDIGISOC  = :AMVT0113-CDIGISOC
+                   AND  CSUBPROD <> '40'
+                   AND  CSUBPROD <> '50'
+                   AND  CSUBPROD <> '65'
+                   AND  CSUBPROD <> '25'
+                   AND  CSUBPROD <> '35'
+                   AND  CSUBPROD <> '66'
+                   AND  CSUBPROD <> '75'
+                   AND  CSUBPROD <> '85'
+                   AND  CSUBPROD <> '86'
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT0113  WS-SQLCODE.
+           IF AMVT0113-OK
+              IF WS-COUNT NOT LESS WS-CON-N1
+                 MOVE WS-CON-S TO SW-CARTA-INSUF-SALDO
+              END-IF
+           ELSE
+              DISPLAY MSG-SELECT-AMVT0113  WS-SQLCODE
+              DISPLAY 'CTIPSOC   = ' AMVT0113-CTIPSOC
+              DISPLAY 'ZSOCIO    = ' AMVT0113-ZSOCIO
+              DISPLAY 'CDIGISOC  = ' AMVT0113-CDIGISOC
+              DISPLAY 'CSUBPROD <> 40'
+              DISPLAY 'CSUBPROD <> 50'
+              DISPLAY 'CSUBPROD <> 65'
+              DISPLAY 'CSUBPROD <> 25'
+              DISPLAY 'CSUBPROD <> 35'
+              DISPLAY 'CSUBPROD <> 66'
+              DISPLAY 'CSUBPROD <> 75'
+              DISPLAY 'CSUBPROD <> 85'
+              DISPLAY 'CSUBPROD <> 86'
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9111-COUNT-BASIOPER-EXIT.
+           EXIT.
+      ******************************************************************
+      *                     0112-SUM-BASIOPER                          *
+      ******************************************************************
+       9112-SUM-BASIOPER.
+      *
+           MOVE '9112-SUM-BASIOPER          ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE WS-CTIPSOC-ANT     TO AMVT0113-CTIPSOC.
+           MOVE WS-ZSOCIO-ANT      TO AMVT0113-ZSOCIO.
+           MOVE WS-CDIGISOC-ANT    TO AMVT0113-CDIGISOC.
+
+           EXEC SQL
+               SELECT  SUM(MSALDO)
+                 INTO :WS-MSALDO :COD-RETORNO1
+                 FROM  AMVT0113_BASIOPER
+                WHERE  CTIPSOC  = :AMVT0113-CTIPSOC
+                  AND  ZSOCIO   = :AMVT0113-ZSOCIO
+                  AND  CDIGISOC = :AMVT0113-CDIGISOC
+                  AND  CPRODUTO = '73'
+                  AND (CSUBPROD = '65'
+                   OR  CSUBPROD = '25'
+                   OR  CSUBPROD = '35')
+            END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT0113  WS-SQLCODE.
+           IF AMVT0113-OK
+              IF COD-RETORNO1 LESS ZEROS
+                 MOVE ZEROS        TO WS-MSALDO
+                 MOVE WS-CON-S     TO SW-CARTA-INSUF-SALDO
+              END-IF
+           ELSE
+              DISPLAY MSG-SELECT-AMVT0113  WS-SQLCODE
+              DISPLAY 'CTIPSOC  = ' AMVT0113-CTIPSOC
+              DISPLAY 'ZSOCIO   = ' AMVT0113-ZSOCIO
+              DISPLAY 'CDIGISOC = ' AMVT0113-CDIGISOC
+              DISPLAY 'CPRODUTO = 73'
+              DISPLAY 'CSUBPROD = 65'
+              DISPLAY 'CSUBPROD = 25'
+              DISPLAY 'CSUBPROD = 35'
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9112-SUM-BASIOPER-EXIT.
+           EXIT.
+      ******************************************************************
+      *                    9113-VALIDA-MINIMO-CREF                     *
+      ******************************************************************
+       9113-VALIDA-MINIMO-CREF.
+      *
+           MOVE '9113-VALIDA-MINIMO-CREF      ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE '73'             TO CMVT1600-CPRODUTO.
+           MOVE '65'             TO CMVT1600-CSUBPROD.
+           MOVE 'EUR'            TO CMVT1600-CMOEDA.
+           MOVE SPACES           TO CMVT1600-CPLSUBS.
+           MOVE WS-CON-A         TO CMVT1600-CPLNENTR.
+           MOVE ZEROS            TO CMVT1600-TXPROG.
+           MOVE ZEROES           TO CMVT1600-QPRAZO.
+           MOVE ZEROS            TO CMVT1600-CCOBADIC.
+           MOVE ZEROS            TO CMVT1600-IDADRECB.
+           MOVE WS-CON-N999      TO CMVT1600-IDADEACT.
+           MOVE WS-DATAOPER      TO CMVT1600-DATAINI.
+           MOVE WS-DATAOPER      TO CMVT1600-DATAFIM.
+
+           EXEC SQL
+               SELECT  MAX(MCAPMIN)
+                 INTO :CMVT1600-MCAPMIN :WS-INDICADOR
+                 FROM  CMVT1600_PLANOSUB
+                WHERE  CPRODUTO  = :CMVT1600-CPRODUTO
+                  AND  CSUBPROD  = :CMVT1600-CSUBPROD
+                  AND  CMOEDA    = :CMVT1600-CMOEDA
+                  AND  CPLSUBS  <> :CMVT1600-CPLSUBS
+                  AND  CPLNENTR  = :CMVT1600-CPLNENTR
+                  AND  TXPROG   <> :CMVT1600-TXPROG
+                  AND  QPRAZO    = :CMVT1600-QPRAZO
+                  AND  CCOBADIC  = :CMVT1600-CCOBADIC
+                  AND  IDADRECB  = :CMVT1600-IDADRECB
+                  AND  IDADEACT <  :CMVT1600-IDADEACT
+                  AND  DATAINI  <= :CMVT1600-DATAINI
+                  AND  DATAFIM  >= :CMVT1600-DATAFIM
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-CMVT1600  WS-SQLCODE.
+           IF CMVT1600-OK
+              IF WS-INDICADOR LESS ZEROS
+                 DISPLAY MSG-SELECT-CMVT1600  WS-SQLCODE
+                 DISPLAY 'CPRODUTO  = ' CMVT1600-CPRODUTO
+                 DISPLAY 'CSUBPROD  = ' CMVT1600-CSUBPROD
+                 DISPLAY 'CMOEDA    = ' CMVT1600-CMOEDA
+                 DISPLAY 'CPLSUBS  <> ' CMVT1600-CPLSUBS
+                 DISPLAY 'CPLNENTR  = ' CMVT1600-CPLNENTR
+                 DISPLAY 'TXPROG   <> ' CMVT1600-TXPROG
+                 DISPLAY 'QPRAZO    = ' CMVT1600-QPRAZO
+                 DISPLAY 'CCOBADIC  = ' CMVT1600-CCOBADIC
+                 DISPLAY 'IDADRECB  = ' CMVT1600-IDADRECB
+                 DISPLAY 'IDADEACT <  ' CMVT1600-IDADEACT
+                 DISPLAY 'DATAINI  <= ' CMVT1600-DATAINI
+                 DISPLAY 'DATAFIM  >= ' CMVT1600-DATAFIM
+                 PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+              ELSE
+                 IF WS-MSALDO NOT LESS CMVT1600-MCAPMIN
+                    MOVE WS-CON-S TO SW-CARTA-INSUF-SALDO
+                 END-IF
+              END-IF
+           ELSE
+              DISPLAY MSG-SELECT-CMVT1600  WS-SQLCODE
+              DISPLAY 'CPRODUTO  = ' CMVT1600-CPRODUTO
+              DISPLAY 'CSUBPROD  = ' CMVT1600-CSUBPROD
+              DISPLAY 'CMOEDA    = ' CMVT1600-CMOEDA
+              DISPLAY 'CPLSUBS  <> ' CMVT1600-CPLSUBS
+              DISPLAY 'CPLNENTR  = ' CMVT1600-CPLNENTR
+              DISPLAY 'TXPROG   <> ' CMVT1600-TXPROG
+              DISPLAY 'QPRAZO    = ' CMVT1600-QPRAZO
+              DISPLAY 'CCOBADIC  = ' CMVT1600-CCOBADIC
+              DISPLAY 'IDADRECB  = ' CMVT1600-IDADRECB
+              DISPLAY 'IDADEACT <  ' CMVT1600-IDADEACT
+              DISPLAY 'DATAINI  <= ' CMVT1600-DATAINI
+              DISPLAY 'DATAFIM  >= ' CMVT1600-DATAFIM
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9113-VALIDA-MINIMO-CREF-EXIT.
+           EXIT.
+      ******************************************************************
+      *                    9120-VALIDA-GPE                             *
+      ******************************************************************
+       9120-VALIDA-GPE.
+      *
+           MOVE '9120-VALIDA-GPE            ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           INITIALIZE AMCW4000-INPUT
+
+           MOVE WS-CBALCAO-ANT    TO AMCW4000-CBALCAO
+           MOVE WS-CPRODUTO-ANT   TO AMCW4000-CPRODUTO
+           MOVE WS-CNUMECTA-ANT   TO AMCW4000-CNUMECTA
+           MOVE WS-CDIGICTA-ANT   TO AMCW4000-CDIGICTA
+
+           PERFORM AMCP4000-SELE-DADOS
+              THRU AMCP4000-SELE-DADOS-EXIT
+
+           EVALUATE TRUE
+                    WHEN AMCW4000-OK
+                         IF  AMCW4000-CLISBOR(1) NOT EQUAL WS-CON-E
+                         AND AMCW4000-CLISBOR(1) NOT EQUAL WS-CON-L
+                             MOVE WS-CON-S TO SW-CARTA-INSUF-SALDO-GPE
+                         END-IF
+
+                    WHEN AMCW4000-CONTA-NAO-EXISTE
+                         CONTINUE
+
+                    WHEN AMCW4000-ERRO-INPUT
+                         DISPLAY AMCW4000-DESC-ERRO
+                         DISPLAY 'CPRODUTO: ' AMCW4000-CPRODUTO
+                         DISPLAY 'CBALCAO : ' AMCW4000-CBALCAO
+                         DISPLAY 'CNUMECTA: ' AMCW4000-CNUMECTA
+                         DISPLAY 'CDIGICTA: ' AMCW4000-CDIGICTA
+
+                         PERFORM 9900-ABEND
+                            THRU 9999-ABEND-EXIT
+
+                    WHEN OTHER
+                         MOVE AMCW4000-SQLCODE TO WS-SQLCODE
+                         DISPLAY MSG-ERRO-AMCP4000
+                         DISPLAY AMCW4000-DESC-ERRO
+                         DISPLAY 'TABELA : ' AMCW4000-TABELA
+                         DISPLAY 'SQLCODE: ' WS-SQLCODE
+
+                         PERFORM 9900-ABEND
+                            THRU 9999-ABEND-EXIT
+           END-EVALUATE.
+
+       9129-VALIDA-GPE-EXIT.
+           EXIT.
+      ******************************************************************
+      *                    9200-VALIDA-GPE                             *
+      ******************************************************************
+       9200-VALIDA-GPE.
+
+           MOVE '9200-VALIDA-GPE            ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           INITIALIZE AMCW4000-INPUT
+                      WS-AMT22-CPRODEMP
+                      WS-AMT22-CBALCEMP
+                      WS-AMT22-CNUMEMP
+                      WS-AMT22-CDIGIEMP
+                      WS-AMT22-ZEMPOIC
+                      WS-AMT22-CBANCO
+                      WS-AMT22-QVIDA
+                      REPLACING ALPHANUMERIC DATA BY SPACES
+                                     NUMERIC DATA BY ZEROS
+
+           MOVE WS-CBALCAO-ANT    TO AMCW4000-CBALCAO
+           MOVE WS-CPRODUTO-ANT   TO AMCW4000-CPRODUTO
+           MOVE WS-CNUMECTA-ANT   TO AMCW4000-CNUMECTA
+           MOVE WS-CDIGICTA-ANT   TO AMCW4000-CDIGICTA
+
+           PERFORM AMCP4000-SELE-DADOS
+              THRU AMCP4000-SELE-DADOS-EXIT
+
+           EVALUATE TRUE
+                    WHEN AMCW4000-OK
+                         IF  AMCW4000-IAVISOIC(1)    EQUAL WS-CON-1
+                         AND AMCW4000-CLISBOR (1) NOT EQUAL WS-CON-E
+                         AND AMCW4000-CLISBOR (1) NOT EQUAL WS-CON-L
+                             MOVE WS-CON-S TO SW-CARTA-SUSPENSAO-GPE
+                         END-IF
+
+                         MOVE AMCW4000-CPRODEMP(1) TO WS-AMT22-CPRODEMP
+                         MOVE AMCW4000-CBALCEMP(1) TO WS-AMT22-CBALCEMP
+                         MOVE AMCW4000-CNUMEMP (1) TO WS-AMT22-CNUMEMP
+                         MOVE AMCW4000-CDIGIEMP(1) TO WS-AMT22-CDIGIEMP
+                         MOVE AMCW4000-ZEMPOIC (1) TO WS-AMT22-ZEMPOIC
+                         MOVE AMCW4000-CBANCO  (1) TO WS-AMT22-CBANCO
+                         MOVE AMCW4000-QVIDA   (1) TO WS-AMT22-QVIDA
+
+                    WHEN AMCW4000-CONTA-NAO-EXISTE
+                         CONTINUE
+
+                    WHEN AMCW4000-ERRO-INPUT
+                         DISPLAY AMCW4000-DESC-ERRO
+                         DISPLAY 'CPRODUTO: ' AMCW4000-CPRODUTO
+                         DISPLAY 'CBALCAO : ' AMCW4000-CBALCAO
+                         DISPLAY 'CNUMECTA: ' AMCW4000-CNUMECTA
+                         DISPLAY 'CDIGICTA: ' AMCW4000-CDIGICTA
+
+                         PERFORM 9900-ABEND
+                            THRU 9999-ABEND-EXIT
+
+                    WHEN OTHER
+                         MOVE AMCW4000-SQLCODE TO WS-SQLCODE
+                         DISPLAY MSG-ERRO-AMCP4000
+                         DISPLAY AMCW4000-DESC-ERRO
+                         DISPLAY 'TABELA : ' AMCW4000-TABELA
+                         DISPLAY 'SQLCODE: ' WS-SQLCODE
+
+                         PERFORM 9900-ABEND
+                            THRU 9999-ABEND-EXIT
+           END-EVALUATE.
+
+       9299-VALIDA-GPE-EXIT.
+           EXIT.
+      ******************************************************************
+      *                       9300-WRITE-AMCR4011                      *
+      ******************************************************************
+       9300-WRITE-AMCR4011.
+      *
+           MOVE '9300-WRITE-AMCR4011      ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           IF AMCR4011-MQUOTAAC NOT EQUAL ZEROS
+
+              WRITE AMCR4011-REG    FROM AMCR4011-REGISTO
+
+              IF NOT AMCR4011-OK
+                 DISPLAY MSG-WRITE-AMCR4011 STATUS-AMCR4011
+                 PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+              END-IF
+           END-IF.
+      *
+       9399-WRITE-AMCR4011-EXIT.
+           EXIT.
+      ******************************************************************
+      *                      9500-VALIDA-GPE-LISBOR                    *
+      ******************************************************************
+       9500-VALIDA-GPE-LISBOR.
+      *
+           MOVE '9500-VALIDA-GPE-LISBOR     ' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           PERFORM 9510-OPEN-CRS-AMT01
+              THRU 9519-OPEN-CRS-AMT01-EXIT.
+
+           PERFORM 9520-FETCH-CRS-AMT01
+              THRU 9529-FETCH-CRS-AMT01-EXIT.
+
+           PERFORM 9530-CICLO-AMT01
+              THRU 9539-CICLO-AMT01-EXIT
+             UNTIL AMVT0113-NOTFND
+                OR SW-GPE-VALIDA.
+
+           PERFORM 9550-CLOSE-CRS-AMT01
+              THRU 9559-CLOSE-CRS-AMT01-EXIT.
+      *
+       9599-VALIDA-GPE-LISBOR-EXIT.
+           EXIT.
+      ******************************************************************
+      *                   9510-OPEN-CRS-AMT01                          *
+      ******************************************************************
+       9510-OPEN-CRS-AMT01.
+      *
+           MOVE '9510-OPEN-CRS-AMT01' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE WS-CTIPSOC-ANT             TO AMVT0113-CTIPSOC .
+           MOVE WS-ZSOCIO-ANT              TO AMVT0113-ZSOCIO  .
+           MOVE WS-CDIGISOC-ANT            TO AMVT0113-CDIGISOC.
+
+           EXEC SQL
+                OPEN CRS-AMT01
+           END-EXEC.
+
+           MOVE SQLCODE TO  STATUS-AMVT0113  WS-SQLCODE.
+           IF NOT AMVT0113-OK
+              DISPLAY MSG-OPEN-AMVT0113 WS-SQLCODE
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9519-OPEN-CRS-AMT01-EXIT.
+           EXIT.
+      ******************************************************************
+      *                9520-FETCH-CRS-AMT01                            *
+      ******************************************************************
+       9520-FETCH-CRS-AMT01.
+      *
+           MOVE '9520-FETCH-CRS-AMT01'   TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                FETCH CRS-AMT01
+                 INTO :AMVT0113-CPRODUTO,
+                      :AMVT0113-CBALCAO ,
+                      :AMVT0113-CNUMECTA,
+                      :AMVT0113-CDIGICTA
+           END-EXEC.
+
+           MOVE SQLCODE TO  STATUS-AMVT0113  WS-SQLCODE.
+           IF NOT AMVT0113-OK AND NOT AMVT0113-NOTFND
+              DISPLAY MSG-FETCH-AMVT0113 WS-SQLCODE
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9529-FETCH-CRS-AMT01-EXIT.
+           EXIT.
+      *X92631 2013-04-03 I
+      ******************************************************************
+      *                   9530-CICLO-AMT01                             *
+      ******************************************************************
+       9530-CICLO-AMT01.
+      *
+           MOVE '9530-CICLO-AMT01' TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF
+
+           INITIALIZE AMCW4000-INPUT
+
+           MOVE AMVT0113-CPRODUTO TO AMCW4000-CPRODUTO
+           MOVE AMVT0113-CBALCAO  TO AMCW4000-CBALCAO
+           MOVE AMVT0113-CNUMECTA TO AMCW4000-CNUMECTA
+           MOVE AMVT0113-CDIGICTA TO AMCW4000-CDIGICTA
+
+           PERFORM AMCP4000-SELE-DADOS
+              THRU AMCP4000-SELE-DADOS-EXIT
+
+           EVALUATE TRUE
+                    WHEN AMCW4000-OK
+                         IF AMCW4000-CLISBOR(1) EQUAL WS-CON-E
+                         OR AMCW4000-CLISBOR(1) EQUAL WS-CON-L
+                            MOVE WS-CON-S TO SWITCH-GPE-VALIDA
+                         END-IF
+
+                    WHEN AMCW4000-CONTA-NAO-EXISTE
+                         CONTINUE
+
+                    WHEN AMCW4000-ERRO-INPUT
+                         DISPLAY AMCW4000-DESC-ERRO
+                         DISPLAY 'CPRODUTO: ' AMCW4000-CPRODUTO
+                         DISPLAY 'CBALCAO : ' AMCW4000-CBALCAO
+                         DISPLAY 'CNUMECTA: ' AMCW4000-CNUMECTA
+                         DISPLAY 'CDIGICTA: ' AMCW4000-CDIGICTA
+
+                         PERFORM 9900-ABEND
+                            THRU 9999-ABEND-EXIT
+
+                    WHEN OTHER
+                         MOVE AMCW4000-SQLCODE TO WS-SQLCODE
+                         DISPLAY MSG-ERRO-AMCP4000
+                         DISPLAY AMCW4000-DESC-ERRO
+                         DISPLAY 'TABELA : ' AMCW4000-TABELA
+                         DISPLAY 'SQLCODE: ' WS-SQLCODE
+
+                         PERFORM 9900-ABEND
+                            THRU 9999-ABEND-EXIT
+           END-EVALUATE
+
+           IF NOT SW-GPE-VALIDA
+              PERFORM 9520-FETCH-CRS-AMT01
+                 THRU 9529-FETCH-CRS-AMT01-EXIT
+           END-IF.
+
+       9539-CICLO-AMT01-EXIT.
+           EXIT.
+      ******************************************************************
+      *                9550-CLOSE-CRS-AMT01                            *
+      ******************************************************************
+       9550-CLOSE-CRS-AMT01.
+      *
+           MOVE '9550-CLOSE-CRS-AMT01'  TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           EXEC SQL
+                CLOSE CRS-AMT01
+           END-EXEC.
+
+           MOVE SQLCODE TO  STATUS-AMVT0113  WS-SQLCODE.
+           IF NOT AMVT0113-OK
+              DISPLAY MSG-CLOSE-AMVT0113 WS-SQLCODE
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9559-CLOSE-CRS-AMT01-EXIT.
+           EXIT.
+      ******************************************************************
+      *               9700-SELECT-AMT10                                *
+      ******************************************************************
+       9700-SELECT-AMT10.
+      *
+           MOVE '9700-SELECT-AMT10'            TO ABEND-CALLER-ID.
+           IF SW-DEBUG-SIM
+              DISPLAY ABEND-CALLER-ID
+           END-IF.
+
+           MOVE AMVT6002-CTIPSOC               TO AMVT1000-CTIPSOC .
+           MOVE AMVT6002-ZSOCIO                TO AMVT1000-ZSOCIO  .
+           MOVE AMVT6002-CDIGISOC              TO AMVT1000-CDIGISOC.
+
+           EXEC SQL
+                SELECT  A.ZCLIENTE,
+                        B.NOMER ,
+                        B.CBLTITCL
+                  INTO :AMVT1000-ZCLIENTE,
+                       :GMVT1000-NOMER ,
+                       :GMVT1000-CBLTITCL
+                  FROM  AMVT1000_COMPLASS A,
+                        GMVT1000_BASICOS B
+                 WHERE A.CTIPSOC  = :AMVT1000-CTIPSOC
+                   AND A.ZSOCIO   = :AMVT1000-ZSOCIO
+                   AND A.CDIGISOC = :AMVT1000-CDIGISOC
+                   AND B.ZCLIENTE = A.ZCLIENTE
+                   WITH UR
+           END-EXEC.
+
+           MOVE SQLCODE  TO  STATUS-AMVT1000  WS-SQLCODE.
+
+           IF NOT AMVT1000-OK
+              DISPLAY MSG-SELECT-AMVT1000  WS-SQLCODE
+              DISPLAY 'CTIPSOC  = ' AMVT1000-CTIPSOC
+              DISPLAY 'ZSOCIO   = ' AMVT1000-ZSOCIO
+              DISPLAY 'CDIGISOC = ' AMVT1000-CDIGISOC
+              PERFORM 9900-ABEND THRU 9999-ABEND-EXIT
+           END-IF.
+      *
+       9799-SELECT-AMT10-EXIT.
+           EXIT.
+      ******************************************************************
+      *                         9900-ABEND                             *
+      ******************************************************************
+       9900-ABEND.
+      *
+           DISPLAY ABEND-CALLER-ID.
+
+           EXEC SQL
+               CLOSE CRS-QUOTVENC
+           END-EXEC.
+
+           EXEC SQL
+               CLOSE CRS-AMT01
+           END-EXEC.
+
+           CLOSE AMCR4011.
+
+           CLOSE AMCR4650.
+
+           EXEC SQL
+                ROLLBACK
+           END-EXEC.
+
+           MOVE WS-CON-ABEND-GRAVE         TO RETURN-CODE.
+
+           STOP RUN.
+      *
+       9999-ABEND-EXIT.
+           EXIT.
+      ******************************************************************
+      *                    COPYBOOKS  - AMCR1009                       *
+      ******************************************************************
+      *
+           COPY AMCP9984.
+      *MC-0830-I
+      *    COPY AMCP9985.
+      *MC-0830-F
+           COPY AMCP9986.
+      *
+      ******************************************************************
+      *                    ROTINAS PRE-CODIFICADAS                     *
+      ******************************************************************
+      *
+        COPY ATCP0010.
+        COPY ATCP1000.
+      *
+           EXEC SQL INCLUDE AMCP4000 END-EXEC.
+      *MC-0830-I
+      *    EXEC SQL INCLUDE AMCC1009 END-EXEC.
+      *MC-0830-F
+      *

@@ -203,6 +203,9 @@ class dadosEcran {
 		this.Tamanho = [];
 		this.Decimais = [];
 		this.dados = [];
+		this.dadosHex = [];
+		this.dadosHexUp = [];
+		this.dadosHexDown = [];
 		this.lrec = CopyBook.Tamanho;
 		let Inicio = 0;
 		let Fim = 0;
@@ -234,6 +237,9 @@ class dadosEcran {
 
 			for (let j = 0; j < NumeroRegistos; j++) {
 				let Reg = [];
+				let RegHex = [];
+				let RegHexUp = [];
+				let RegHexDown = [];
 
 				for (let i = 0; i < CopyBook.Copy.length; i++) {
 					const element = CopyBook.Copy[i];
@@ -252,7 +258,10 @@ class dadosEcran {
 						let Alfa = '';
 
 
-						let AlfaArray = []
+						let AlfaArray = [];
+						let TextoAlfa = '';
+						let TextoAlfaUp = '';
+						let TextoAlfaDown = '';
 						let negativo = false;
 
 						if (Ficheiro[Inicio] == 255) {
@@ -285,9 +294,15 @@ class dadosEcran {
 								let Texto = '';
 
 								AlfaArray.forEach(CarHex => {
+									TextoAlfa +=CarHex;
+									TextoAlfaUp +=CarHex.substring(0,1);
+									TextoAlfaDown +=CarHex.substring(1,2);
 									Texto += hextoEBCDIC(CarHex);
 								})
 								Reg.push(Texto);
+								RegHex.push(TextoAlfa);
+								RegHexUp.push(TextoAlfaUp);
+								RegHexDown.push(TextoAlfaDown);
 								// console.log('Texto        ' + Texto);
 								break;
 
@@ -298,6 +313,9 @@ class dadosEcran {
 								let NumeroSinal = '';
 
 								AlfaArray.forEach(CarHex => {
+									TextoAlfa +=CarHex;
+									TextoAlfaUp +=CarHex.substring(0,1);
+									TextoAlfaDown +=CarHex.substring(1,2);
 									NumeroSinal += hextoEBCDIC(CarHex);
 								})
 
@@ -308,6 +326,9 @@ class dadosEcran {
 
 								const numericoTratadodecimais = acertaDecimais(numericoTratado, element.decimais);
 								Reg.push(numericoTratadodecimais);
+								RegHex.push(TextoAlfa);
+								RegHexUp.push(TextoAlfaUp);
+								RegHexDown.push(TextoAlfaDown);
 
 								// console.log('numericoTratadodecimais ' + numericoTratadodecimais);
 								break;
@@ -321,8 +342,14 @@ class dadosEcran {
 									if (CarHex.length == 1) {
 										AlfaCarHex2 = CarHex;
 										Alfa += '0' + AlfaCarHex2;
+										TextoAlfa += '0' + CarHex;
+										TextoAlfaUp += '0' + CarHex.substring(0,1);
+										TextoAlfaDown += '0' + CarHex.substring(1,2);
 									} else {
 										Alfa += CarHex;
+										TextoAlfa +=CarHex;
+										TextoAlfaUp +=CarHex.substring(0,1);
+										TextoAlfaDown +=CarHex.substring(1,2);
 									}
 								})
 
@@ -331,6 +358,9 @@ class dadosEcran {
 
 
 								Reg.push(CompTratado);
+								RegHex.push(TextoAlfa);
+								RegHexUp.push(TextoAlfaUp);
+								RegHexDown.push(TextoAlfaDown);
 								// console.log('CompTratado ' + CompTratado);
 
 								break;
@@ -347,8 +377,14 @@ class dadosEcran {
 									if (CarHex.length == 1) {
 										AlfaCarHex = CarHex;
 										Alfa += '0' + AlfaCarHex;
+										TextoAlfa += '0' + CarHex;
+										TextoAlfaUp += '0' + CarHex.substring(0,1);
+										TextoAlfaDown += '0' + CarHex.substring(1,2);
 									} else {
 										Alfa += CarHex;
+										TextoAlfa +=CarHex;
+										TextoAlfaUp +=CarHex.substring(0,1);
+										TextoAlfaDown +=CarHex.substring(1,2);
 									}
 								})
 
@@ -359,6 +395,9 @@ class dadosEcran {
 								numerico = acertaDecimais(numerico, element.decimais)
 								// console.log('numero - ' + numerico)
 								Reg.push(numerico);
+								RegHex.push(TextoAlfa);
+								RegHexUp.push(TextoAlfaUp);
+								RegHexDown.push(TextoAlfaDown);
 
 								break
 
@@ -368,6 +407,9 @@ class dadosEcran {
 					}
 				}
 				this.dados.push(Reg);
+				this.dadosHex.push(RegHex);
+				this.dadosHexUp.push(RegHexUp);
+				this.dadosHexDown.push(RegHexDown);
 			}
 		}
 
@@ -555,11 +597,11 @@ class dadosEcran {
 					// console.log('binario: ' + binario);
 					const diferença = (campo.Tamanho * 2) - binario.length;
 					let zeros = ''
-					let FFs = ''
+					// let FFs = ''
 
 					for (let j = 0; j < diferença; j++) {
 						zeros += '0';
-						FFs += 'f';
+						// FFs += 'f';
 					}
 
 					const ListaCaracterTemp = zeros + binario
@@ -758,7 +800,7 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 					while (NumeroHistorico < choices.length) {
 						choices.pop();
 					}
-					vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousCopybooks', choices);
+					vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousWorksationCopybooks', choices);
 
 				}
 
@@ -826,7 +868,7 @@ async function SelecionarCopybook(sessao, Ficheiro) {
 							while (NumeroHistorico < choices.length) {
 								choices.pop();
 							}
-							vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousWorksationCopybooks', choices);
+							vscode.workspace.getConfiguration().update('zFile.Copybooks.ListOfPreviousCopybooks', choices);
 
 						}
 
@@ -879,7 +921,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			dados.Tipo[i] == zPic.ValidaTipoCampo.Display ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.National
 		) {
-			const vazio = `<td><input onclick="SelectLinha(NumeroSubstituir)" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
+			const vazio = `<td><input onclick="SelectLinha(NumeroSubstituir);this.select()" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
 			LinhaVazia += vazio;
 		} else {
 
@@ -906,7 +948,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 				ValorMinimo = - ValorMaximo;
 
-				const element = `<td><input onclick="SelectLinha(NumeroSubstituir)" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
+				const element = `<td><input onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
 				LinhaVazia += element;
 			}
 
@@ -922,20 +964,23 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 		for (let j = 0; j < dados.dados[i].length; j++) {
 
 			let ValorTamanho = dados.Tamanho[j];
+			// const hexadecimal = dados.dadosHex[i][j];
+			const hexadecimal = dados.dadosHex[i][j].toUpperCase();
 
 			if (dados.Tipo[j] == zPic.ValidaTipoCampo.Alfanumerico ||
 				dados.Tipo[j] == zPic.ValidaTipoCampo.Display ||
 				dados.Tipo[j] == zPic.ValidaTipoCampo.National
 			) {
-				const element = `<td><input onclick="SelectLinha(${NLinha})" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
+				const element = `<td><input onclick="SelectLinha(${NLinha});this.select()" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
 					+ `" maxlength="` + ValorTamanho
-					+ `"></td>`;
+					+ `" title="${hexadecimal}"><div class="tool"><p>${dados.dadosHexUp[i][j].toUpperCase()}<br>${dados.dadosHexDown[i][j].toUpperCase()}</p></div></td>`;
 				Linha += element;
 			} else {
 
 				const inteirodecimais = 10 ** dados.Decimais[j];
 				const ValorMaximo = (10 ** dados.Tamanho[j] - 1) / inteirodecimais;
 				const ValorDecimais = 1 / inteirodecimais;
+
 				let ValorMinimo = 0;
 
 				if (ValorDecimais > 0) { ++ValorTamanho }
@@ -955,7 +1000,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					ValorMinimo = - ValorMaximo;
 					++ValorTamanho;
 				}
-				const element = `<td><input onclick="SelectLinha(${NLinha})" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
+				const element = `<td><input onclick="SelectLinha(${NLinha});this.select()" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
 				max="${ValorMaximo}"
 				min="${ValorMinimo}"
 				step="${ValorDecimais}"
@@ -967,7 +1012,9 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					}
                     if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){
 					    this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};
-					};"></td>`;
+					};" title="${hexadecimal}">
+					<div class="tool numerico"><p>${dados.dadosHexUp[i][j].toUpperCase()}<br>${dados.dadosHexDown[i][j].toUpperCase()}</p></div>
+					</td>`;
 
 				Linha += element;
 
@@ -992,6 +1039,22 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
         <style>
 
+			.tool {
+				display: block;
+				position: relative;
+				opacity: .5;
+				text-align: left;
+				font-family: monospace;
+			}
+			.numerico {
+				text-align: right;
+				right: 16px;
+			}
+
+			.tool p {
+				margin: 0;
+			}
+
 		    body {
 			    padding: 0;
 			}
@@ -1006,9 +1069,9 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				left: 0.5em;
 			}
 
-			.selecionado {
-            	box-shadow: 0px 0px 0px 3px var(--vscode-editor-inactiveSelectionBackground);
-			}
+			// .selecionado {
+            // 	box-shadow: 0px 0px 0px 3px var(--vscode-editor-inactiveSelectionBackground);
+			// }
 
             .menuitem {
 			    display:block;
@@ -1082,7 +1145,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 display: block;
                 position: relative;
                 overflow-x: auto;
-                border-spacing: 5px;
                 width: max-content;
             }
 
@@ -1092,19 +1154,29 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             }
 
             td, input {
-                background-color: var(--vscode-list-hoverBackground);
+                background-color: inherit;
 				color: var(--vscode-list-activeSelectionForeground);
                 text-align: center;
-                padding: 3px;
 				border: none;
+           	 	border-width: 0;
 				z-index:100;
+				width: -webkit-fill-available;
             }
 
-            tr:hover, input:hover {
-                background-color: var(--vscode-list-activeSelectionBackground);
-				border-color: var(--vscode-list-activeSelectionBackground);
-            	box-shadow: 0px 0px 0px 3px var(--vscode-list-activeSelectionBackground);
+            // input:hover {
+			// 	background-color: var(--vscode-list-activeSelectionBackground);
+            // }
+
+			tr:nth-child(even) {
+		    	background-color: var(--vscode-tab-inactiveBackground);
             }
+
+
+        	input:focus {
+        	    outline: solid;
+		  		outline-width: 1px;
+				outline-color: var(--vscode-list-activeSelectionForeground);
+        	}
 
             .numeros {
                 background-color: var(--vscode-button-secondaryHoverBackground);
@@ -1181,11 +1253,11 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			        console.log('SelectLinha ' + Linha);
 				    LinhaClicada = Linha;
 
-				    for (let i = 0; i < document.getElementsByName('Linha').length; i++) {
-				    	document.getElementsByName('Linha')[i].classList.remove("selecionado");
-				    }
+				    // for (let i = 0; i < document.getElementsByName('Linha').length; i++) {
+				    // 	document.getElementsByName('Linha')[i].classList.remove("selecionado");
+				    // }
 
-					document.getElementById('Linha' + Linha).classList.add("selecionado");
+					// document.getElementById('Linha' + Linha).classList.add("selecionado");
 			    	esconde();
 			    }
 			}
@@ -1360,6 +1432,31 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
                 }
             });
 
+            document.onkeydown = function(e) {
+				// console.log(e);
+				if (e.altKey){
+					switch (e.keyCode) {
+						case 38:
+							console.log("up arrow pressed");
+							if (LinhaClicada<NumeroLinhas) {
+								++LinhaClicada;
+							}
+							break;
+						case 40:
+							console.log("down arrow pressed");
+							if (LinhaClicada>0) {
+								--LinhaClicada;
+							}
+							break;
+						case 37:
+							console.log("left arrow pressed");
+							break;
+						case 39:
+							console.log("right arrow pressed");
+							break;
+					}
+            	};
+			}
 			// window.addEventListener("click", (event) => {
             //     esconde();
             // });

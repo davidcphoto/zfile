@@ -14,9 +14,11 @@
     "typescript.preferences.organizeImports": {
     },
     "zSearch.SearchStrings.ListOfPreviousSearchStrings": [
+        "amcp",
         "accdc"
     ],
     "zSearch.SearchFilters.ListOfPreviousSearchFilters": [
+        "amb",
         "ami"
     ]
 }

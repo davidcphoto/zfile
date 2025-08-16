@@ -2,11 +2,11 @@
   "name": "zfile",
   "displayName": "zFile",
   "description": "File reader/editor for mainframe",
-  "version": "1.0.1",
-  "publisher": "DavidCanto",
-  "repository": {
-    "url": "https://github.com/davidcphoto/zFile"
-  },
+    "version": "1.0.1",
+    "publisher": "DavidCanto",
+    "repository": {
+      "url": "https://github.com/davidcphoto/zFile"
+    },
   "keywords": [
     "cobol",
     "jcl",
@@ -39,6 +39,14 @@
       {
         "command": "zfile.OpenFile",
         "title": "zFile - Open File"
+      },
+      {
+        "command": "zfile.toWhere",
+        "title": "zFile - Flow to where"
+      },
+      {
+        "command": "zfile.fromWhere",
+        "title": "zFile - Flow from where"
       }
     ],
     "menus": {
@@ -85,6 +93,7 @@
           "order": 11,
           "minItems": 0,
           "maxItems": 20,
+            "default":["#fce303", "#fcad03", "#fc8403", "#fc5203", "#fc1403"],
           "items": {
             "type": "string"
           },
