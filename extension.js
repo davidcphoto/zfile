@@ -286,7 +286,6 @@ class dadosEcran {
 							case zPic.ValidaTipoCampo.Display:
 							case zPic.ValidaTipoCampo.National:
 							case zPic.ValidaTipoCampo.NumericoFormatado:
-							case zPic.ValidaTipoCampo.Numerico:
 
 								// Trata Alfanumericos e numericos sem sinal
 								// Converte os pares hexadecimais em hexadecimal do central e depois converte para caracteres
@@ -306,6 +305,7 @@ class dadosEcran {
 								// console.log('Texto        ' + Texto);
 								break;
 
+							case zPic.ValidaTipoCampo.Numerico:
 							case zPic.ValidaTipoCampo.NumericoSinal:
 
 								// Trata numericos com sinal
@@ -319,11 +319,15 @@ class dadosEcran {
 									NumeroSinal += hextoEBCDIC(CarHex);
 								})
 
-								// Nota: O ebcdic_parser não trata corretamente as casas decimais e por defeito
-								//       assume sempre 2 casas decimais por isso multiplico por 100 e valido as casas
-								//       decimais depois
-								const numericoTratado = ebcdic_parser.parse(NumeroSinal) * 100;
-
+								let numericoTratado =0 ;
+								if (zPic.ValidaTipoCampo.NumericoSinal){
+									// Nota: O ebcdic_parser não trata corretamente as casas decimais e por defeito
+									//       assume sempre 2 casas decimais por isso multiplico por 100 e valido as casas
+									//       decimais depois
+									numericoTratado = ebcdic_parser.parse(NumeroSinal) * 100;
+								} else {
+									numericoTratado = Number(NumeroSinal);
+								}
 								const numericoTratadodecimais = acertaDecimais(numericoTratado, element.decimais);
 								Reg.push(numericoTratadodecimais);
 								RegHex.push(TextoAlfa);
@@ -916,7 +920,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			dados.Tipo[i] == zPic.ValidaTipoCampo.Display ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.National
 		) {
-			const vazio = `<td><input onchange="Alterado(this)" onclick="SelectLinha(NumeroSubstituir);this.select()" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
+			const vazio = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
 			LinhaVazia += vazio;
 		} else {
 
@@ -943,7 +947,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 				ValorMinimo = - ValorMaximo;
 
-				const element = `<td><input onchange="Alterado(this)" onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
+				const element = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
 				LinhaVazia += element;
 			}
 
@@ -966,7 +970,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				dados.Tipo[j] == zPic.ValidaTipoCampo.Display ||
 				dados.Tipo[j] == zPic.ValidaTipoCampo.National
 			) {
-				const element = `<td><input onchange="Alterado(this)" onclick="SelectLinha(${NLinha});this.select()" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
+				const element = `<td><input onchange="Alterado(this, ${dados.Tipo[j]})" onclick="SelectLinha(${NLinha});this.select()" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
 					+ `" maxlength="` + ValorTamanho
 					+ `" title="${hexadecimal}"><div class="tool"><p>${dados.dadosHexUp[i][j].toUpperCase()}<br>${dados.dadosHexDown[i][j].toUpperCase()}</p></div></td>`;
 				Linha += element;
@@ -995,7 +999,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					ValorMinimo = - ValorMaximo;
 					++ValorTamanho;
 				}
-				const element = `<td><input onchange="Alterado(this)" onclick="SelectLinha(${NLinha});this.select()" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
+				const element = `<td><input onchange="Alterado(this, ${dados.Tipo[j]})" onclick="SelectLinha(${NLinha});this.select()" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
 				max="${ValorMaximo}"
 				min="${ValorMinimo}"
 				step="${ValorDecimais}"
@@ -1278,6 +1282,23 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			let NumeroLinhas = ${NLinha};
 			let NColunas = ${NColunas};
 	        const vscode = acquireVsCodeApi();
+			ValidaTipoCampo = {
+    			Alfanumerico: 0,
+    			Numerico: 1,
+    			NumericoSinal: 2,
+    			Comp: 3,
+    			Comp1: 4,
+    			Comp2: 5,
+    			Comp3: 6,
+    			Comp4: 7,
+    			Comp5: 8,
+    			Display: 9,
+    			National: 10,
+    			Binary: 11,
+    			NumericoFormatado: 12,
+    			Grupo: 13,
+    			Switch: 14
+			}
 
 			function Validacheck() {
 				console.log('Checked');
@@ -1476,21 +1497,140 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	        }
 
-			function Alterado(isto) {
-				const valor = isto.value;
+			function Alterado(isto, Tipo) {
+				console.log("isto " + isto);
+				let valor = isto.value;
+				const tamanhoMax = String(isto.max);
+				const tamanhoTotal = (tamanhoMax.split('9').length - 1);
+				const tamanho = tamanhoTotal / 2;
+				const tamanhoTXT = isto.maxLength;
+				console.log("Tipo " + Tipo);
 				console.log("novo valor " + valor);
-				console.log("valor.length " + valor.length);
+				console.log("tamanhoTXT " + tamanhoTXT);
+				console.log("tamanho " + tamanho);
+
+				let negativo = false;
 
 				let up='';
 				let down='';
+				let espaços = '';
 
-				for (let i = 0; i < valor.length; i++) {
-					console.log(valor[i]);
-					const caracter = EBCDICtoHex(valor[i]);
-					console.log('caracter ' + caracter);
-					up += caracter.up.toUpperCase();
-					down += caracter.down.toUpperCase();
+				switch (Tipo) {
+					case ValidaTipoCampo.Binary:
+					case ValidaTipoCampo.Comp:
+					case ValidaTipoCampo.Comp2:
+					case ValidaTipoCampo.Comp4:
+					case ValidaTipoCampo.Comp5:
 
+						console.log('bin');
+
+						// valor
+						// if (valor<0) {
+						// 	valor = -valor;
+						// }
+						// 	numericoTxt = String(valor)
+
+						Break;
+
+					case ValidaTipoCampo.Comp3:
+
+						console.log('comp-3');
+
+						let numericoTxt  = new String;
+						if (valor > 0) {
+							numericoTxt = String(valor) + 'c';
+						} else {
+							valor = Math.abs(valor);
+							numericoTxt = String(valor) + 'd';
+						}
+
+						if (numericoTxt.length & 1) {numericoTxt = '0' + numericoTxt}
+
+						for (let i = 0; i < numericoTxt.length; i++) {
+							if (i & 1) {
+								down += numericoTxt[i].toUpperCase();
+							} else {
+								up += numericoTxt[i].toUpperCase();
+							}
+						}
+
+						const NumeroEspaçosUP = tamanho - up.length;
+						espaços = '';
+
+						for (let i = 0; i < NumeroEspaçosUP; i++) {
+							espaços += '0';
+						}
+
+						up = espaços + up;
+
+
+						const NumeroEspaçosDown = tamanho - down.length;
+						espaços = '';
+
+						for (let i = 0; i < NumeroEspaçosDown; i++) {
+							espaços += '0';
+						}
+
+						down = espaços + down;
+						break;
+
+					case ValidaTipoCampo.Numerico:
+					case ValidaTipoCampo.NumericoSinal:
+
+						if (valor<0) {
+							negativo = true;
+						}
+
+						const NumeroEspaçosNum = tamanhoTotal - valor.length;
+
+						for (let i = 0; i < NumeroEspaçosNum; i++) {
+							espaços += '0';
+						}
+
+						valor = espaços + valor;
+
+						for (let i = 0; i < valor.length; i++) {
+							console.log(valor[i]);
+							const caracter = EBCDICtoHex(valor[i]);
+							console.log('caracter ' + caracter);
+							up += caracter.up.toUpperCase();
+							down += caracter.down.toUpperCase();
+
+						}
+
+						if (Tipo==ValidaTipoCampo.NumericoSinal){
+							if (negativo) {
+								up[up.length - 1] = up[up.length - 1].replace('F', 'D')
+							} else {
+								up[up.length - 1] = up[up.length - 1].replace('F', 'C')
+							}
+						}
+						break;
+
+					case ValidaTipoCampo.Alfanumerico:
+					case ValidaTipoCampo.Display:
+					case ValidaTipoCampo.National:
+					case ValidaTipoCampo.NumericoFormatado:
+
+						console.log('Alfa');
+
+						const NumeroEspaços = tamanhoTXT - valor.length;
+
+						for (let i = 0; i < NumeroEspaços; i++) {
+							espaços += ' ';
+						}
+
+						valor = valor + espaços;
+
+						for (let i = 0; i < valor.length; i++) {
+							console.log(valor[i]);
+							const caracter = EBCDICtoHex(valor[i]);
+							console.log('caracter ' + caracter);
+							up += caracter.up.toUpperCase();
+							down += caracter.down.toUpperCase();
+
+						}
+						break;
 				}
 				console.log("novo up " + up);
 				console.log("novo down " + down);
@@ -1498,7 +1638,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				console.log("antes " + isto.nextElementSibling.innerHTML);
   				isto.nextElementSibling.innerHTML = '<p>' + up + '<br>' + down + '</p>';
 				console.log("depois " + isto.nextElementSibling.innerHTML);
-
 
 				function EBCDICtoHex(Caracter = '') {
 
@@ -1570,26 +1709,34 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             });
 
             document.onkeydown = function(e) {
-				// console.log(e);
-				if (e.altKey){
+
+				const next=document.activeElement.tabIndex;
+				console.log(e);
+				if (e.ctrlKey){
 					switch (e.keyCode) {
 						case 38:
 							console.log("up arrow pressed");
 							if (LinhaClicada<NumeroLinhas) {
 								++LinhaClicada;
 							}
+    						document.getElementsByName("tabela")[next-1].focus();
 							break;
 						case 40:
 							console.log("down arrow pressed");
 							if (LinhaClicada>0) {
 								--LinhaClicada;
 							}
+    						document.getElementsByName("tabela")[next+1].focus();
 							break;
 						case 37:
 							console.log("left arrow pressed");
+
+    						const next=document.activeElement.tabIndex + 1;
+    						document.getElementsByName("tabela")[next-1].focus();
 							break;
 						case 39:
 							console.log("right arrow pressed");
+    						document.getElementsByName("tabela")[next].focus();
 							break;
 					}
             	};
