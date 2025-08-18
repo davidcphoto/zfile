@@ -343,8 +343,8 @@ class dadosEcran {
 										AlfaCarHex2 = CarHex;
 										Alfa += '0' + AlfaCarHex2;
 										TextoAlfa += '0' + CarHex;
-										TextoAlfaUp += '0' + CarHex.substring(0,1);
-										TextoAlfaDown += '0' + CarHex.substring(1,2);
+										TextoAlfaUp += '0';
+										TextoAlfaDown += CarHex;
 									} else {
 										Alfa += CarHex;
 										TextoAlfa +=CarHex;
@@ -378,8 +378,8 @@ class dadosEcran {
 										AlfaCarHex = CarHex;
 										Alfa += '0' + AlfaCarHex;
 										TextoAlfa += '0' + CarHex;
-										TextoAlfaUp += '0' + CarHex.substring(0,1);
-										TextoAlfaDown += '0' + CarHex.substring(1,2);
+										TextoAlfaUp += '0';
+										TextoAlfaDown += CarHex;
 									} else {
 										Alfa += CarHex;
 										TextoAlfa +=CarHex;
@@ -471,11 +471,6 @@ class dadosEcran {
 
 		const copy = this.Copybook.Copy;
 
-		// for (let i = 0; i < copy.length; i++) {
-		// 	const element = dados.Cabecalho[i];
-		// 	// const vazio = '<td><input SelectLinha() value="" ></td>';
-		// 	// LinhaVazia += vazio;
-		// }
 
 		let IndiceCampo = 0;
 		let listaCaracteresTotal = [];
@@ -921,7 +916,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			dados.Tipo[i] == zPic.ValidaTipoCampo.Display ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.National
 		) {
-			const vazio = `<td><input onclick="SelectLinha(NumeroSubstituir);this.select()" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
+			const vazio = `<td><input onchange="Alterado(this)" onclick="SelectLinha(NumeroSubstituir);this.select()" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
 			LinhaVazia += vazio;
 		} else {
 
@@ -948,7 +943,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 				ValorMinimo = - ValorMaximo;
 
-				const element = `<td><input onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
+				const element = `<td><input onchange="Alterado(this)" onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
 				LinhaVazia += element;
 			}
 
@@ -971,7 +966,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				dados.Tipo[j] == zPic.ValidaTipoCampo.Display ||
 				dados.Tipo[j] == zPic.ValidaTipoCampo.National
 			) {
-				const element = `<td><input onclick="SelectLinha(${NLinha});this.select()" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
+				const element = `<td><input onchange="Alterado(this)" onclick="SelectLinha(${NLinha});this.select()" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
 					+ `" maxlength="` + ValorTamanho
 					+ `" title="${hexadecimal}"><div class="tool"><p>${dados.dadosHexUp[i][j].toUpperCase()}<br>${dados.dadosHexDown[i][j].toUpperCase()}</p></div></td>`;
 				Linha += element;
@@ -1000,7 +995,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					ValorMinimo = - ValorMaximo;
 					++ValorTamanho;
 				}
-				const element = `<td><input onclick="SelectLinha(${NLinha});this.select()" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
+				const element = `<td><input onchange="Alterado(this)" onclick="SelectLinha(${NLinha});this.select()" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
 				max="${ValorMaximo}"
 				min="${ValorMinimo}"
 				step="${ValorDecimais}"
@@ -1040,19 +1035,19 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
         <style>
 
 			.tool {
-				display: block;
+				display: none;
 				position: relative;
-				opacity: .5;
+				opacity: 0;
 				text-align: left;
 				font-family: monospace;
 			}
 			.numerico {
 				text-align: right;
-				right: 16px;
+				right: 15px;
 			}
 
-			.tool p {
-				margin: 0;
+			p {
+				margin: 3px;
 			}
 
 		    body {
@@ -1155,7 +1150,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
             td, input {
                 background-color: inherit;
-				color: var(--vscode-list-activeSelectionForeground);
+				color: var(--vscode-editor-foreground);
                 text-align: center;
 				border: none;
            	 	border-width: 0;
@@ -1210,13 +1205,92 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 	    		box-shadow: 0px 8px 16px 0px rgba(255, 255, 255, 0.3);
 			}
 
+
+
+			.switch {
+			  	position: relative;
+			  	display: inline-block;
+			  	width: 30px;
+			  	height: 17px;
+			}
+
+			.switch input {
+			  	opacity: 0;
+			  	width: 0;
+			  	height: 0;
+			}
+
+			.slider {
+			  	position: absolute;
+			  	cursor: pointer;
+			  	top: 0;
+			  	left: 0;
+			  	right: 0;
+			  	bottom: 0;
+			  	background-color: #ccc;
+			  	-webkit-transition: .4s;
+			  	transition: .4s;
+			}
+
+			.slider:before {
+			  	position: absolute;
+			  	content: "";
+			  	height: 13px;
+			  	width: 13px;
+			  	left: 2px;
+			  	bottom: 2px;
+			  	background-color: white;
+			  	transition: .4s;
+			}
+
+			input:checked + .slider {
+			  	background-color: #2196F3;
+			}
+
+			input:focus + .slider {
+			  	box-shadow: 0 0 1px #b1d1ebff;
+			}
+
+			input:checked + .slider:before {
+			  	transform: translateX(13px);
+			}
+
+
+			/* Rounded sliders */
+			.slider.round {
+			  	border-radius: 17px;
+			}
+
+			.slider.round:before {
+			  	border-radius: 50%;
+			}
+
+			.check {
+				position: relative;
+				display: ruby;
+			}
+
         </style>
 		<script>
+
 
             let LinhaClicada=0;
 			let NumeroLinhas = ${NLinha};
 			let NColunas = ${NColunas};
 	        const vscode = acquireVsCodeApi();
+
+			function Validacheck() {
+				console.log('Checked');
+				var isChecked = document.getElementById("hex").checked;
+				console.log('isChecked ' + isChecked);
+				if (isChecked)  {
+					document.querySelectorAll(".tool").forEach(a=>a.style.display = "block");
+					document.querySelectorAll(".tool").forEach(a=>a.style.opacity = ".5");
+				} else {
+					document.querySelectorAll(".tool").forEach(a=>a.style.opacity = "0");
+					document.querySelectorAll(".tool").forEach(a=>a.style.display = "none");
+				}
+			}
 
 			function clicarmenu() {
 				if (document.getElementById('menu').style.display != "block"){
@@ -1402,6 +1476,69 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 	        }
 
+			function Alterado(isto) {
+				const valor = isto.value;
+				console.log("novo valor " + valor);
+				console.log("valor.length " + valor.length);
+
+				let up='';
+				let down='';
+
+				for (let i = 0; i < valor.length; i++) {
+					console.log(valor[i]);
+					const caracter = EBCDICtoHex(valor[i]);
+					console.log('caracter ' + caracter);
+					up += caracter.up.toUpperCase();
+					down += caracter.down.toUpperCase();
+
+				}
+				console.log("novo up " + up);
+				console.log("novo down " + down);
+
+				console.log("antes " + isto.nextElementSibling.innerHTML);
+  				isto.nextElementSibling.innerHTML = '<p>' + up + '<br>' + down + '</p>';
+				console.log("depois " + isto.nextElementSibling.innerHTML);
+
+
+				function EBCDICtoHex(Caracter = '') {
+
+					let x = 0;
+					let y = 0;
+
+					const quadro = [
+						['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+						['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+						['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+						['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+						[' ', '.', '.', '.', '.', '.', '.', '.', '.', '.', '¢', '.', '<', '(', '+', '|'],
+						['&', '.', '.', '.', '.', '.', '.', '.', '.', '.', '!', '$', '*', ')', ';', '¬'],
+						['-', '/', '.', '.', '.', '.', '.', '.', '.', '.', '¦', ',', '%', '_', '>', '?'],
+						['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', ':', '#', '@', "'", '=', '"'],
+						['.', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '.', '.', '.', '.', '.', '±'],
+						['.', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', '.', '.', '.', '.', '.', '.'],
+						['.', '~', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '.', '.', '.', '.', '.'],
+						['^', '.', '.', '.', '.', '.', '.', '.', '.', '.', '[', ']', '.', '.', '.', '.'],
+						['{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '.', '.', '.', '.', '.', '.'],
+						['}', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', '.', '.', '.', '.', '.', '.'],
+						['.', '.', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '.', '.', '.', '.', '.', '.'],
+						['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '.', '.', '.', '.', '.']
+					];
+
+					for (let i = 0; i < quadro.length; i++) {
+						const linha = quadro[i];
+						for (let j = 0; j < linha.length; j++) {
+							if (linha[j] == Caracter) {
+								x = i;
+								y = j;
+							}
+						}
+					}
+					return JSON.parse('{"up": "' + x.toString(16) + '", "down": "' + y.toString(16) + '"}');
+					return '';
+				}
+
+			}
+
 			window.addEventListener('message', event => {
 
                 const message = event.data; // The JSON data our extension sent
@@ -1457,15 +1594,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					}
             	};
 			}
-			// window.addEventListener("click", (event) => {
-            //     esconde();
-            // });
-
-
-			// window.addEventListener("contextmenu", (event) => {
-            //     console.log(event.offsetX, event.offsetY);
-            //     esconde();
-            // });
 
 		</script>
 </head>
@@ -1486,6 +1614,13 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             <div id=colunadados>
                 <p>File: ${Ficheiro}</p>
                 <p>Copybook: ${Copybook}</p>
+				<div class="check">
+					<p> Hex on/Off:</p>
+					<label class="switch">
+					  	<input id="hex" type="checkbox" onchange="Validacheck()">
+					  	<span class="slider round"></span>
+					</label>
+	        	</div>
 	        </div>
 		</div>
 		<div id="espaco">

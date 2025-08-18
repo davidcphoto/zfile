@@ -45,11 +45,11 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 2.0.0
+### 1.1.0
 
-Fixed the previous selected copybooks bug.
-Alow to move between cells with arrows.
-Visual updated to a cleaner look.
+- Fixed the previous selected copybooks bug.
+- (Hex)decimal on/of switch
+- Visual updated to a cleaner look.
 
 ### 1.0.1
 

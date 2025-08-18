@@ -2,11 +2,11 @@
   "name": "zfile",
   "displayName": "zFile",
   "description": "File reader/editor for mainframe",
-    "version": "1.0.1",
-    "publisher": "DavidCanto",
-    "repository": {
-      "url": "https://github.com/davidcphoto/zFile"
-    },
+  "version": "1.1.0",
+  "publisher": "DavidCanto",
+  "repository": {
+    "url": "https://github.com/davidcphoto/zFile"
+  },
   "keywords": [
     "cobol",
     "jcl",
@@ -93,7 +93,13 @@
           "order": 11,
           "minItems": 0,
           "maxItems": 20,
-            "default":["#fce303", "#fcad03", "#fc8403", "#fc5203", "#fc1403"],
+          "default": [
+            "#fce303",
+            "#fcad03",
+            "#fc8403",
+            "#fc5203",
+            "#fc1403"
+          ],
           "items": {
             "type": "string"
           },
@@ -108,20 +114,20 @@
     "test": "node ./test/runTest.js"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.2",
-    "@types/node": "18.x",
-    "@types/vscode": "^1.93.0",
-    "@vscode/test-electron": "^2.3.4",
-    "eslint": "^8.50.0",
-    "glob": "^10.3.3",
-    "mocha": "^10.2.0",
-    "typescript": "^5.2.2"
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.3.0",
+    "@types/vscode": "^1.103.0",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.33.0",
+    "glob": "^11.0.3",
+    "mocha": "^11.7.1",
+    "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@vscode/codicons": "^0.0.36",
-    "@zowe/imperative": "^5.27.1",
-    "@zowe/zos-files-for-zowe-sdk": "^7.29.2",
-    "@zowe/zowe-explorer-api": "^2.18.0",
+    "@vscode/codicons": "^0.0.39",
+    "@zowe/imperative": "^8.26.2",
+    "@zowe/zos-files-for-zowe-sdk": "^8.26.2",
+    "@zowe/zowe-explorer-api": "^3.2.2",
     "ebcdic-parser": "^1.0.0"
   }
 }
