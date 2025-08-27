@@ -98,8 +98,7 @@ function lerFicheiroTxt(Ficheiro) {
 async function abrirFicheiroBin(sessao, Ficheiro) {
 
 	const FicheiroBinario = await zos_files.Get.dataSet(sessao, Ficheiro, { "binary": true }).catch(e => {
-		vscode.window.showErrorMessage(e.mDetails.msg)
-		// console.log(e)
+		vscode.window.showErrorMessage(e.message)
 	})
 	// console.log('binario ' + FicheiroBinario)
 
@@ -253,8 +252,6 @@ class dadosEcran {
 							Fim += element.Tamanho;
 						}
 
-						// console.log('----------------');
-						// console.log('Campo        ' + element.Variavel);
 						let Alfa = '';
 
 
@@ -268,6 +265,9 @@ class dadosEcran {
 							negativo = true;
 						}
 
+						let hexUp = '';
+						let hexDown = '';
+
 						for (let K = Inicio; K < Fim; K++) {
 							if (negativo) {
 								if (K < Fim - 1) {
@@ -278,8 +278,22 @@ class dadosEcran {
 							} else {
 								AlfaArray.push(Ficheiro[K].toString(16));
 							}
+							switch (Ficheiro[K].toString(16).length) {
+								case 2:
+									hexUp += Ficheiro[K].toString(16).substring(0, 1);
+									hexDown += Ficheiro[K].toString(16).substring(1, 2);
+									break;
+								case 1:
+									hexUp += '0';
+									hexDown += Ficheiro[K].toString(16);
+									break;
+								case 0:
+									hexUp += '0';
+									hexDown += '0';
+							};
 						}
-						// console.log('AlfaArray    ' + AlfaArray);
+						console.log('hexUp   ' + hexUp);
+						console.log('hexDown ' + hexDown);
 
 						switch (element.Tipo) {
 							case zPic.ValidaTipoCampo.Alfanumerico:
@@ -293,16 +307,11 @@ class dadosEcran {
 								let Texto = '';
 
 								AlfaArray.forEach(CarHex => {
-									TextoAlfa +=CarHex;
-									TextoAlfaUp +=CarHex.substring(0,1);
-									TextoAlfaDown +=CarHex.substring(1,2);
+									TextoAlfa += CarHex;
 									Texto += hextoEBCDIC(CarHex);
 								})
 								Reg.push(Texto);
 								RegHex.push(TextoAlfa);
-								RegHexUp.push(TextoAlfaUp);
-								RegHexDown.push(TextoAlfaDown);
-								// console.log('Texto        ' + Texto);
 								break;
 
 							case zPic.ValidaTipoCampo.Numerico:
@@ -313,14 +322,12 @@ class dadosEcran {
 								let NumeroSinal = '';
 
 								AlfaArray.forEach(CarHex => {
-									TextoAlfa +=CarHex;
-									TextoAlfaUp +=CarHex.substring(0,1);
-									TextoAlfaDown +=CarHex.substring(1,2);
+									TextoAlfa += CarHex;
 									NumeroSinal += hextoEBCDIC(CarHex);
 								})
 
-								let numericoTratado =0 ;
-								if (zPic.ValidaTipoCampo.NumericoSinal){
+								let numericoTratado = 0;
+								if (zPic.ValidaTipoCampo.NumericoSinal) {
 									// Nota: O ebcdic_parser não trata corretamente as casas decimais e por defeito
 									//       assume sempre 2 casas decimais por isso multiplico por 100 e valido as casas
 									//       decimais depois
@@ -331,10 +338,6 @@ class dadosEcran {
 								const numericoTratadodecimais = acertaDecimais(numericoTratado, element.decimais);
 								Reg.push(numericoTratadodecimais);
 								RegHex.push(TextoAlfa);
-								RegHexUp.push(TextoAlfaUp);
-								RegHexDown.push(TextoAlfaDown);
-
-								// console.log('numericoTratadodecimais ' + numericoTratadodecimais);
 								break;
 
 							case zPic.ValidaTipoCampo.Comp3:
@@ -347,25 +350,17 @@ class dadosEcran {
 										AlfaCarHex2 = CarHex;
 										Alfa += '0' + AlfaCarHex2;
 										TextoAlfa += '0' + CarHex;
-										TextoAlfaUp += '0';
-										TextoAlfaDown += CarHex;
 									} else {
 										Alfa += CarHex;
-										TextoAlfa +=CarHex;
-										TextoAlfaUp +=CarHex.substring(0,1);
-										TextoAlfaDown +=CarHex.substring(1,2);
+										TextoAlfa += CarHex;
 									}
 								})
 
-								// console.log('Alfa         ' + Alfa);
 								const CompTratado = converterNumerico(Alfa, element.decimais);
 
 
 								Reg.push(CompTratado);
 								RegHex.push(TextoAlfa);
-								RegHexUp.push(TextoAlfaUp);
-								RegHexDown.push(TextoAlfaDown);
-								// console.log('CompTratado ' + CompTratado);
 
 								break;
 
@@ -382,13 +377,11 @@ class dadosEcran {
 										AlfaCarHex = CarHex;
 										Alfa += '0' + AlfaCarHex;
 										TextoAlfa += '0' + CarHex;
-										TextoAlfaUp += '0';
-										TextoAlfaDown += CarHex;
 									} else {
 										Alfa += CarHex;
-										TextoAlfa +=CarHex;
-										TextoAlfaUp +=CarHex.substring(0,1);
-										TextoAlfaDown +=CarHex.substring(1,2);
+										TextoAlfa += CarHex;
+										TextoAlfaUp += CarHex.substring(0, 1);
+										TextoAlfaDown += CarHex.substring(1, 2);
 									}
 								})
 
@@ -397,17 +390,15 @@ class dadosEcran {
 									numerico = -numerico;
 								}
 								numerico = acertaDecimais(numerico, element.decimais)
-								// console.log('numero - ' + numerico)
 								Reg.push(numerico);
 								RegHex.push(TextoAlfa);
-								RegHexUp.push(TextoAlfaUp);
-								RegHexDown.push(TextoAlfaDown);
 
-								break
+								break;
 
-							default:
-							// console.log(i + ' - ' + AlfaArray)
 						}
+
+						RegHexUp.push(hexUp);
+						RegHexDown.push(hexDown);
 					}
 				}
 				this.dados.push(Reg);
@@ -585,11 +576,6 @@ class dadosEcran {
 					}
 
 					let numeroComp = RetiraVirgula(NumeroSemSinal, campo.tamanhoBruto, campo.decimais);
-					// if (negativo) {
-					// 	numeroComp3 += 'd'
-					// } else {
-					// 	numeroComp3 += 'c'
-					// }
 
 					// console.log('numero: ' + numeroComp);
 					const binario = Number(numeroComp).toString(16)
@@ -623,7 +609,7 @@ class dadosEcran {
 								} else {
 									b = '0';
 									if (a != 'f') {
-										a = (parseInt(a,16) + 1).toString(16);
+										a = (parseInt(a, 16) + 1).toString(16);
 										sinalPorTratar = false;
 									} else {
 										a = '0';
@@ -918,38 +904,46 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 		++NColunas;
 		if (dados.Tipo[i] == zPic.ValidaTipoCampo.Alfanumerico ||
 			dados.Tipo[i] == zPic.ValidaTipoCampo.Display ||
-			dados.Tipo[i] == zPic.ValidaTipoCampo.National
+			dados.Tipo[i] == zPic.ValidaTipoCampo.National ||
+			dados.Tipo[i] == zPic.ValidaTipoCampo.NumericoFormatado
 		) {
-			const vazio = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}"></td>`;
+			const vazio = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="alfa" name="tabela" value="" maxlength="${dados.Tamanho[i]}" size="${dados.Tamanho[i]}"><div class="tool"><p>${'4'.repeat(dados.Tamanho[i])}<br>${'0'.repeat(dados.Tamanho[i])}</p></div></td>`;
 			LinhaVazia += vazio;
 		} else {
 
-			// let ValorTamanhoVazio = dados.Tamanho[i];
 			const inteirodecimais = 10 ** dados.Decimais[i];
 			const ValorMaximo = (10 ** dados.Tamanho[i] - 1) / inteirodecimais;
 			const ValorDecimais = 1 / inteirodecimais;
 			let ValorMinimo = 0;
+			let element = '';
 
-			// if (ValorDecimais > 0) { ++ValorTamanhoVazio }
+
+			switch (dados.Tipo[i]) {
+				case zPic.ValidaTipoCampo.Binary:
+				case zPic.ValidaTipoCampo.Comp:
+				case zPic.ValidaTipoCampo.Comp1:
+				case zPic.ValidaTipoCampo.Comp2:
+				case zPic.ValidaTipoCampo.Comp4:
+				case zPic.ValidaTipoCampo.Comp5:
+				case zPic.ValidaTipoCampo.NumericoSinal:
+				// case zPic.ValidaTipoCampo.NumericoFormatado:
+
+					ValorMinimo = - ValorMaximo;
+					element = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"><div class="tool"><p>${'0'.repeat(Math.ceil((dados.Tamanho[i] + 1) / 2))}<br>${'0'.repeat(Math.ceil((dados.Tamanho[i] + 1) / 2))}</td>`;
+					break;
+
+				case zPic.ValidaTipoCampo.Comp3:
+					ValorMinimo = - ValorMaximo;
+					element = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"><div class="tool"><p>${'0'.repeat(Math.ceil((dados.Tamanho[i] + 1) / 2))}<br>${'F'.repeat(Math.floor((dados.Tamanho[i] + 1) / 2))}</td>`;
+					break;
 
 
-			if (dados.Tipo[i] == zPic.ValidaTipoCampo.Binary ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.Comp ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.Comp1 ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.Comp2 ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.Comp3 ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.Comp4 ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.Comp5 ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.NumericoSinal ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.Numerico ||
-				dados.Tipo[i] == zPic.ValidaTipoCampo.NumericoFormatado
-			) {
+				case zPic.ValidaTipoCampo.Numerico:
 
-				ValorMinimo = - ValorMaximo;
-
-				const element = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"></td>`;
-				LinhaVazia += element;
+					element = `<td><input onchange="Alterado(this, ${dados.Tipo[i]})" onclick="SelectLinha(NumeroSubstituir);this.select()" class="number" type="number" name="tabela" value="0" max="${ValorMaximo}" min="${ValorMinimo}" step="${ValorDecimais}" let GuardarValor=0; onkeydown="GuardarValor=this.value" onkeyup="if(this.value > ${ValorMaximo} || this.value < ${ValorMinimo}) {this.value=GuardarValor;} if (Number(this.value)>Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais}){this.value=Math.trunc(Number(this.value) * ${inteirodecimais})/${inteirodecimais};};"><div class="tool"><p>${'0'.repeat(Math.ceil((dados.Tamanho[i] + 1) / 2))}<br>${'0'.repeat(dados.Tamanho[i])}</td>`;
+					break;
 			}
+			LinhaVazia += element;
 
 		}
 	}
@@ -968,11 +962,11 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 			if (dados.Tipo[j] == zPic.ValidaTipoCampo.Alfanumerico ||
 				dados.Tipo[j] == zPic.ValidaTipoCampo.Display ||
-				dados.Tipo[j] == zPic.ValidaTipoCampo.National
+				dados.Tipo[j] == zPic.ValidaTipoCampo.National||
+				dados.Tipo[j] == zPic.ValidaTipoCampo.NumericoFormatado
 			) {
-				const element = `<td><input onchange="Alterado(this, ${dados.Tipo[j]})" onclick="SelectLinha(${NLinha});this.select()" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trim()
-					+ `" maxlength="` + ValorTamanho
-					+ `" title="${hexadecimal}"><div class="tool"><p>${dados.dadosHexUp[i][j].toUpperCase()}<br>${dados.dadosHexDown[i][j].toUpperCase()}</p></div></td>`;
+				const element = `<td><input onchange="Alterado(this, ${dados.Tipo[j]})" onclick="SelectLinha(${NLinha});this.select()" class="alfa" name="tabela" value="` + String(dados.dados[i][j]).trimEnd()
+					+ `" maxlength="${ValorTamanho}" size="${ValorTamanho}" title="${hexadecimal}"><div class="tool"><p>${dados.dadosHexUp[i][j].toUpperCase()}<br>${dados.dadosHexDown[i][j].toUpperCase()}</p></div></td>`;
 				Linha += element;
 			} else {
 
@@ -984,20 +978,22 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 
 				if (ValorDecimais > 0) { ++ValorTamanho }
 
+				switch (dados.Tipo[j]) {
+					case zPic.ValidaTipoCampo.Binary:
+					case zPic.ValidaTipoCampo.Comp:
+					case zPic.ValidaTipoCampo.Comp1:
+					case zPic.ValidaTipoCampo.Comp2:
+					case zPic.ValidaTipoCampo.Comp3:
+					case zPic.ValidaTipoCampo.Comp4:
+					case zPic.ValidaTipoCampo.Comp5:
+					case zPic.ValidaTipoCampo.NumericoSinal:
+					// case zPic.ValidaTipoCampo.NumericoFormatado:
 
-				if (dados.Tipo[j] == zPic.ValidaTipoCampo.Binary ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp1 ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp2 ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp3 ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp4 ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.Comp5 ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.NumericoSinal ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.Numerico ||
-					dados.Tipo[j] == zPic.ValidaTipoCampo.NumericoFormatado
-				) {
-					ValorMinimo = - ValorMaximo;
-					++ValorTamanho;
+						ValorMinimo = - ValorMaximo;
+
+					case zPic.ValidaTipoCampo.Numerico:
+
+						++ValorTamanho;
 				}
 				const element = `<td><input onchange="Alterado(this, ${dados.Tipo[j]})" onclick="SelectLinha(${NLinha});this.select()" class="number" type="number" name="tabela" value="${dados.dados[i][j]}"
 				max="${ValorMaximo}"
@@ -1044,6 +1040,7 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				opacity: 0;
 				text-align: left;
 				font-family: monospace;
+				font-size: 14px;
 			}
 			.numerico {
 				text-align: right;
@@ -1153,6 +1150,8 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
             }
 
             td, input {
+				font-family: monospace;
+				font-size: 14px;
                 background-color: inherit;
 				color: var(--vscode-editor-foreground);
                 text-align: center;
@@ -1500,14 +1499,27 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 			function Alterado(isto, Tipo) {
 				console.log("isto " + isto);
 				let valor = isto.value;
+				let tamanhoTotal = 0;
+				let tamanhoDecimais = 0;
 				const tamanhoMax = String(isto.max);
-				const tamanhoTotal = (tamanhoMax.split('9').length - 1);
-				const tamanho = tamanhoTotal / 2;
+				const tamanhoseparado = tamanhoMax.split('.');
+				if (tamanhoseparado.length>1){
+				 	tamanhoTotal = tamanhoseparado[0].length + tamanhoseparado[1].length;
+				 	tamanhoDecimais = tamanhoseparado[1].length;
+				} else {
+						tamanhoTotal = tamanhoseparado[0].length;
+						tamanhoDecimais = 0;
+				}
+
+				const tamanho = (tamanhoTotal + 1) / 2;
 				const tamanhoTXT = isto.maxLength;
 				console.log("Tipo " + Tipo);
-				console.log("novo valor " + valor);
-				console.log("tamanhoTXT " + tamanhoTXT);
-				console.log("tamanho " + tamanho);
+				console.log("novo valor      " + valor);
+				console.log("tamanhoMax      " + tamanhoMax);
+				console.log("tamanhoTotal    " + tamanhoTotal);
+				console.log("tamanhoTXT      " + tamanhoTXT);
+				console.log("tamanho         " + tamanho);
+				console.log("tamanhoseparado " + tamanhoseparado);
 
 				let negativo = false;
 
@@ -1522,26 +1534,148 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 					case ValidaTipoCampo.Comp4:
 					case ValidaTipoCampo.Comp5:
 
-						console.log('bin');
+						let numeroComp = '';
+						let ListaCaracter = '';
+						let tamanhobinario = 0;
 
-						// valor
-						// if (valor<0) {
-						// 	valor = -valor;
+						switch (true) {
+							case tamanhoTotal<=4:
+								tamanhobinario = 4;
+								break;
+							case tamanhoTotal<=9:
+								tamanhobinario = 8;
+								break;
+							default:
+								tamanhobinario = 16;
+								break;
+						}
+
+						if (Number(valor) < 0) {
+							negativo = true;
+							const Valor2 = -Number(valor);
+							numeroComp = RetiraVirgula(Valor2,tamanho, tamanhoDecimais);
+						} else {
+							numeroComp = RetiraVirgula(Number(valor),tamanho, tamanhoDecimais);
+						}
+
+						const binario = Number(numeroComp).toString(16);
+
+						const espaçosBinario = tamanhobinario - binario.length;
+
+						const ListaCaracterTemp = binario;
+
+						let inicioBinario ='';
+
+						if (negativo) {
+
+							let ListaCaracter2 = ListaCaracterTemp;
+							console.log('ListaCaracter2 ' + ListaCaracter2);
+
+							let resto = - 1;
+
+							for (let j = ListaCaracter2.length-1; j >= 0; j--) {
+								const caracter = ListaCaracter2[j];
+							    console.log('caracter ' + caracter);
+								let caracterHexa = parseInt(caracter, 16);
+								if (caracterHexa < 15) {
+									caracterHexa += resto;
+									resto = 0;
+								} else {
+									caracterHexa = 0;
+								}
+								console.log('caracterHexa ' + caracterHexa);
+								const caracterHexaNegativo = 15-caracterHexa;
+							    console.log('caracterHexaNegativo ' + caracterHexaNegativo);
+
+
+								ListaCaracter = caracterHexaNegativo.toString(16) + ListaCaracter;
+							}
+
+
+							for (let i = 0; i < espaçosBinario; i++) {
+								inicioBinario += 'F';
+							}
+							ListaCaracter = inicioBinario + ListaCaracter;
+
+
+						} else {
+
+							for (let i = 0; i < espaçosBinario; i++) {
+								inicioBinario += '0';
+							}
+							ListaCaracter = inicioBinario + ListaCaracterTemp;
+
+						}
+
+
+						// if (negativo) {
+						// 	ListaCaracter = ListaCaracterTemp;
+						// 	let sinalPorTratar = true;
+						// 	for (let j = ListaCaracter.length - 1; j >= 0; j--) {
+						// 		let a = (15 - parseInt(ListaCaracter[j].substring(0, 1), 16)).toString(16);
+						// 		let b = (15 - parseInt(ListaCaracter[j].substring(1, 2), 16)).toString(16);
+
+						// 		// para valores negativos é necessario adicionar 1
+						// 		// se ja tiver o valor f (o ultimo digito em decimal) fica com o valor 0
+						// 		// e passa 1 para o digito seguinte
+						// 		if (sinalPorTratar) {
+						// 			if (b != 'f') {
+						// 				b = (parseInt(b, 16) + 1).toString(16);
+						// 				sinalPorTratar = false;
+						// 			} else {
+						// 				b = '0';
+						// 				if (a != 'f') {
+						// 					a = (parseInt(a,16) + 1).toString(16);
+						// 					sinalPorTratar = false;
+						// 				} else {
+						// 					a = '0';
+						// 				}
+						// 			}
+						// 		}
+						// 		ListaCaracter[j] = a + b;
+
+						// 	}
+
+						// 	for (let i = 0; i < espaçosBinario; i++) {
+						// 		inicioBinario += 'F';
+						// 	}
+						// 	ListaCaracter = inicioBinario + ListaCaracter;
+
+						// } else {
+						// 	for (let i = 0; i < espaçosBinario; i++) {
+						// 		inicioBinario += '0';
+						// 	}
+						// 	// ListaCaracter = ListaCaracterTemp.match(/.{1,2}/g);
+						// 	ListaCaracter = inicioBinario + ListaCaracterTemp;
 						// }
-						// 	numericoTxt = String(valor)
 
-						Break;
+
+
+						console.log('ListaCaracterTemp ' + ListaCaracterTemp);
+						console.log('ListaCaracter     ' + ListaCaracter);
+
+						// if (ListaCaracter.length & 1) {ListaCaracter = '0' + ListaCaracter}
+
+						for (let i = 0; i < ListaCaracter.length; i++) {
+							if (i & 1) {
+								down += ListaCaracter[i].toUpperCase();
+							} else {
+								up += ListaCaracter[i].toUpperCase();
+							}
+						}
+
+						break;
 
 					case ValidaTipoCampo.Comp3:
 
 						console.log('comp-3');
 
 						let numericoTxt  = new String;
-						if (valor > 0) {
-							numericoTxt = String(valor) + 'c';
+						if (valor >= 0) {
+							numericoTxt = RetiraVirgula(valor,tamanhoTotal, tamanhoDecimais) + 'c';
 						} else {
 							valor = Math.abs(valor);
-							numericoTxt = String(valor) + 'd';
+							numericoTxt = RetiraVirgula(valor,tamanhoTotal, tamanhoDecimais) + 'd';
 						}
 
 						if (numericoTxt.length & 1) {numericoTxt = '0' + numericoTxt}
@@ -1554,24 +1688,6 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 							}
 						}
 
-						const NumeroEspaçosUP = tamanho - up.length;
-						espaços = '';
-
-						for (let i = 0; i < NumeroEspaçosUP; i++) {
-							espaços += '0';
-						}
-
-						up = espaços + up;
-
-
-						const NumeroEspaçosDown = tamanho - down.length;
-						espaços = '';
-
-						for (let i = 0; i < NumeroEspaçosDown; i++) {
-							espaços += '0';
-						}
-
-						down = espaços + down;
 						break;
 
 					case ValidaTipoCampo.Numerico:
@@ -1581,13 +1697,9 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 							negativo = true;
 						}
 
-						const NumeroEspaçosNum = tamanhoTotal - valor.length;
+						// const NumeroEspaçosNum = tamanhoTotal - valor.length;
 
-						for (let i = 0; i < NumeroEspaçosNum; i++) {
-							espaços += '0';
-						}
-
-						valor = espaços + valor;
+						valor = RetiraVirgula(valor,tamanhoTotal, tamanhoDecimais);
 
 						for (let i = 0; i < valor.length; i++) {
 							console.log(valor[i]);
@@ -1638,6 +1750,37 @@ function formataHTML(Ficheiro, Copybook, dados = new dadosEcran) {
 				console.log("antes " + isto.nextElementSibling.innerHTML);
   				isto.nextElementSibling.innerHTML = '<p>' + up + '<br>' + down + '</p>';
 				console.log("depois " + isto.nextElementSibling.innerHTML);
+
+
+				function RetiraVirgula(numero = '', Tamanho = 0, Decimais = 0) {
+
+					const numeroSepardo = String(numero).split('.');
+					const TamanhoInteiro = Tamanho - Decimais;
+					const diferençaInteiro = TamanhoInteiro - numeroSepardo[0].length
+					let diferençaDecimais = 0;
+					if (numeroSepardo.length > 1) {
+						diferençaDecimais = Decimais - numeroSepardo[1].length;
+					} else {
+						diferençaDecimais = Decimais;
+					}
+
+					let TextoInteiro = '';
+
+					for (let i = 0; i < diferençaInteiro; i++) {
+						TextoInteiro += '0';
+					}
+
+					TextoInteiro += numeroSepardo[0];
+
+					if (numeroSepardo.length > 1) {
+						TextoInteiro += numeroSepardo[1];
+					}
+					for (let i = 0; i < diferençaDecimais; i++) {
+						TextoInteiro += '0';
+					}
+
+					return TextoInteiro;
+				}
 
 				function EBCDICtoHex(Caracter = '') {
 

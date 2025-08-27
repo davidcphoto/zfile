@@ -3,9 +3,12 @@
 
 ## [1.1.0]
 
-- Fixed the previous selected copybooks bug.
-- (Hex)decimal on/of switch
-- Visual updated to a cleaner look.
+- Fixed bugs:
+  - Previous selected copybooks don't open.
+  - Non seined numerics accepted negative numbers.
+  - Formatted numerics.
+- Expand view to view Hexadecimal with a on/of switch.
+- Improved user interface.
 
 ## [1.0.1]
 

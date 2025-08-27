@@ -152,7 +152,8 @@ class Linha {
             case TipoCampo.National:
             case TipoCampo.NumericoFormatado:
 
-                this.TamanhoIndividual = linhaSeparada[posValor].length;
+                this.TamanhoIndividual = String(linhaSeparada[posValor-1]).length;
+                this.tamanhoBruto = String(linhaSeparada[posValor-1]).length;
 
                 break;
 
