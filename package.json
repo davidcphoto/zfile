@@ -37,7 +37,7 @@
   ],
   "icon": "imagens/zFile.png",
   "engines": {
-    "vscode": "^1.93.0"
+    "vscode": "^1.103.0"
   },
   "categories": [
     "Other"
@@ -127,7 +127,7 @@
     "@types/node": "^24.3.0",
     "@types/vscode": "^1.103.0",
     "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.33.0",
+    "eslint": "^9.34.0",
     "glob": "^11.0.3",
     "mocha": "^11.7.1",
     "typescript": "^5.9.2"
